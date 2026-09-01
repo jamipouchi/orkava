@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://orkava.vercel.app/sitemap.xml
+Sitemap: https://www.orkava.app/sitemap.xml
