@@ -1,14 +1,11 @@
 :root {
   --bg: #f8f8f5;
-  --surface: #ffffff;
   --surface-subtle: #fbfbf8;
   --ink: #111827;
   --ink-muted: #667085;
   --ink-soft: #98a2b3;
   --line: rgba(17, 24, 39, 0.08);
   --line-strong: rgba(17, 24, 39, 0.14);
-  --accent: #0d7a55;
-  --accent-strong: #0a6647;
   --radius: 14px;
   --font:
     -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
@@ -19,12 +16,11 @@
   box-sizing: border-box;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font);
@@ -88,201 +84,23 @@ a {
   color: var(--ink);
 }
 
-/* Hero */
+/* Hero — one line, centered in the viewport */
 
 .hero {
-  padding: 104px 0 88px;
+  flex: 1;
+  display: grid;
+  place-items: center;
   text-align: center;
-}
-
-.eyebrow {
-  margin: 0 0 18px;
-  color: var(--ink-muted);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 96px 0;
 }
 
 .hero h1 {
   margin: 0 auto;
-  max-width: 720px;
-  font-size: clamp(38px, 6vw, 60px);
+  max-width: 760px;
+  font-size: clamp(34px, 6vw, 56px);
   font-weight: 700;
   letter-spacing: -0.03em;
-  line-height: 1.06;
-}
-
-.lede {
-  margin: 24px auto 0;
-  max-width: 620px;
-  color: var(--ink-muted);
-  font-size: 18.5px;
-  line-height: 1.65;
-}
-
-.hero-actions {
-  margin-top: 36px;
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* Buttons */
-
-.button {
-  display: inline-block;
-  padding: 11px 22px;
-  border-radius: 999px;
-  font-size: 15px;
-  font-weight: 600;
-  border: 1px solid transparent;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.button-primary {
-  background: var(--ink);
-  color: #ffffff;
-}
-
-.button-primary:hover {
-  background: #000000;
-}
-
-.button-ghost {
-  border-color: var(--line-strong);
-  color: var(--ink);
-}
-
-.button-ghost:hover {
-  border-color: var(--ink);
-}
-
-/* Features */
-
-.features {
-  padding: 24px 0 88px;
-}
-
-.features h2 {
-  margin: 0;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.section-lede {
-  margin: 12px 0 0;
-  max-width: 560px;
-  color: var(--ink-muted);
-  font-size: 16.5px;
-}
-
-.feature-grid {
-  margin-top: 40px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.feature {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 26px 26px 24px;
-}
-
-.feature svg {
-  width: 26px;
-  height: 26px;
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.feature h3 {
-  margin: 14px 0 6px;
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.feature p {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: 15px;
-}
-
-/* About */
-
-.about {
-  padding: 8px 0 96px;
-}
-
-.about-inner {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 16px;
-  align-items: stretch;
-}
-
-.about-inner > div:first-child {
-  background: var(--surface-subtle);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 34px 34px;
-}
-
-.about h2 {
-  margin: 0 0 12px;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.about p {
-  margin: 0;
-  color: var(--ink-muted);
-  font-size: 15.5px;
-}
-
-.about strong {
-  color: var(--ink);
-}
-
-.about-card {
-  background: var(--ink);
-  color: #ffffff;
-  border-radius: var(--radius);
-  padding: 34px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.about-card h3 {
-  margin: 0 0 8px;
-  font-size: 19px;
-  font-weight: 650;
-}
-
-.about-card p {
-  margin: 0 0 20px;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 15px;
-}
-
-.about-card .button-primary {
-  align-self: flex-start;
-  background: #ffffff;
-  color: var(--ink);
-}
-
-.about-card .button-primary:hover {
-  background: rgba(255, 255, 255, 0.9);
+  line-height: 1.08;
 }
 
 /* Footer */
@@ -296,8 +114,8 @@ a {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
   gap: 32px;
-  padding-top: 56px;
-  padding-bottom: 40px;
+  padding-top: 48px;
+  padding-bottom: 36px;
 }
 
 .footer-brand p {
@@ -429,21 +247,8 @@ a {
 /* Responsive */
 
 @media (max-width: 760px) {
-  .hero {
-    padding: 72px 0 64px;
-  }
-
-  .feature-grid,
-  .about-inner,
   .footer-grid {
     grid-template-columns: 1fr;
-  }
-
-  .features {
-    padding: 8px 0 64px;
-  }
-
-  .about {
-    padding: 8px 0 72px;
+    gap: 24px;
   }
 }
