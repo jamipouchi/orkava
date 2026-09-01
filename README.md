@@ -5,7 +5,7 @@ used as the public presence + legal pages (aviso legal, privacidad, cookies)
 required for Google Business / Meta Business verification.
 
 Titular: **ORKAVA TECHNOLOGIES SL** · NIF B93935401 ·
-Plaza Catalunya 10, 17004 Girona (España) · hola@orkava.app
+Plaza Catalunya 10, 17004 Girona (España) · miquel@orkava.app
 
 ## Structure
 
@@ -27,7 +27,7 @@ vercel --prod
 
 ## Notes
 
-- Contact email is `hola@orkava.app` — make sure the mailbox exists (it is the
+- Contact email is `miquel@orkava.app` — make sure the mailbox exists (it is the
   LSSI contact address quoted in all legal pages).
 - Legal data last verified against the Registro Mercantil report dated
   2026-08-24.
