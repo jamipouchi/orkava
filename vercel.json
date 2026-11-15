@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/demo-requests",
+      "destination": "https://api.orkava.app/api/demo-requests"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(scene\\.[0-9a-f]{10}\\.js)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "(landing\\.orkava\\.app|.*\\.vercel\\.app)" }],
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+    }
+  ]
+}

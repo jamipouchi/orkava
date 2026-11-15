@@ -2,90 +2,671 @@
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Orkava · Sistema automatizado para farmacias</title>
-    <meta
-      name="description"
-      content="Orkava — sistema automatizado para farmacias: mensajes de WhatsApp, Facebook e Instagram en un solo sitio, avisos y fidelización, y publicación en redes. ORKAVA TECHNOLOGIES SL · Girona, España."
-    />
-    <meta property="og:title" content="Orkava · Sistema automatizado para farmacias" />
-    <meta
-      property="og:description"
-      content="Mensajes de WhatsApp, Facebook e Instagram en un solo sitio, avisos y fidelización, y publicación en redes para farmacias. ORKAVA TECHNOLOGIES SL · Girona."
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-visual" />
+    <!-- The page opens at night. Until the first screen is whole nothing is drawn, and this
+         makes the browser's own blank page dark instead of white. -->
+    <meta name="color-scheme" content="dark" />
+    <title>Orkava · Tú, en el mostrador. Orkava, en la rebotica.</title>
+    <meta name="description" content="Orkava. Inteligencia artificial para farmacias. ORKAVA TECHNOLOGIES SL · Girona, España." />
+    <meta property="og:title" content="Orkava · Tú, en el mostrador. Orkava, en la rebotica." />
+    <meta property="og:description" content="Orkava. Inteligencia artificial para farmacias. ORKAVA TECHNOLOGIES SL · Girona, España." />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/svg+xml" href="orky.svg" />
-    <link rel="stylesheet" href="styles.css" />
+    <script>
+      // Boot, before anything paints: how this visit is shown, the scene's code on its way,
+      // and the hold that keeps the first paint back until the first screen is complete.
+      //
+      // The page has two forms. The story (class "story") is the scroll story over the 3D
+      // scene. The plain page (no class) is the same words as an ordinary page between two
+      // stills; it is what shows without scripts, without usable graphics, or on a machine too
+      // slow for the scene. The first screen is the same picture in both.
+      (() => {
+        const root = document.documentElement;
+        const q = new URLSearchParams(location.search);
+        root.classList.add("js");
+        const capture = q.has("poster");
+        const VIEW = "orkava.view.1";
+        let known = null;
+        try { known = localStorage.getItem(VIEW); } catch {}
+        // ?view=plain|story forces a form, for review
+        const forced = q.get("view");
+        const story = capture || forced === "story" || (forced !== "plain" && known !== "plain" && "WebGL2RenderingContext" in window);
+        if (story) root.classList.add("story");
+        // The story holds still until its scene has taken over (see the story script).
+        if (story && !capture) root.classList.add("wait");
+
+        // The scene's code (three.js bundled in, built by build.mjs). It is fetched as soon as
+        // the machine is known to draw it, which on a return visit is now, in parallel with
+        // the still; it runs once the first screen has painted.
+        const SCENE = "scene.7286447228.js";
+        let fetching = false;
+        const fetchScene = () => {
+          if (fetching) return;
+          fetching = true;
+          const l = document.createElement("link");
+          l.rel = "preload";
+          l.as = "script";
+          l.href = SCENE;
+          document.head.append(l);
+        };
+
+        // Can this machine draw the scene? A machine without graphics acceleration draws WebGL
+        // in software (SwiftShader, llvmpipe), where the scene is a slideshow. The probe runs in
+        // a worker, because creating the first WebGL context can block for a second or more on
+        // such a machine. The verdict is remembered, so a return visit knows at once.
+        let settle, onPainted;
+        const verdict = new Promise((r) => (settle = r));
+        const painted = new Promise((r) => (onPainted = r));
+        const decide = (ok) => {
+          try { localStorage.setItem(VIEW, ok ? "story" : "plain"); } catch {}
+          settle(ok);
+        };
+        if (!story) settle(false);
+        else if (capture || forced === "story" || known === "story") settle(true);
+        else {
+          const SOFT = /swiftshader|llvmpipe|softpipe|software|basic render|lavapipe/i;
+          const probe = `
+            const c = () => new OffscreenCanvas(1, 1);
+            let r = "unsupported";
+            try {
+              if (c().getContext("webgl2")) {
+                const g = c().getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+                r = "caveat";
+                if (g) {
+                  const e = g.getExtension("WEBGL_debug_renderer_info");
+                  r = String(e ? g.getParameter(e.UNMASKED_RENDERER_WEBGL) : g.getParameter(g.RENDERER));
+                  g.getExtension("WEBGL_lose_context")?.loseContext();
+                }
+              }
+            } catch {}
+            postMessage(r);`;
+          // at once: on a first visit the scene's code waits for this answer
+          try {
+            const w = new Worker(URL.createObjectURL(new Blob([probe], { type: "text/javascript" })));
+            const t = setTimeout(() => settle(true), 6000);
+            w.onmessage = (e) => {
+              clearTimeout(t);
+              w.terminate();
+              if (e.data === "unsupported") settle(true); // the scene's own checks decide
+              else decide(e.data !== "caveat" && !SOFT.test(e.data));
+            };
+            w.onerror = () => settle(true);
+          } catch {
+            settle(true);
+          }
+        }
+        setTimeout(onPainted, 3000);
+        // the scene's own code, only for the story
+        verdict.then((ok) => {
+          if (!ok) return;
+          fetchScene();
+          painted.then(() => {
+            const sc = document.createElement("script");
+            sc.src = SCENE;
+            sc.onerror = () => window.rebotica?.goPlain(false);
+            document.head.append(sc);
+          });
+        });
+
+        // Where the visitor was: the page restores its own scroll position on a reload or a
+        // return, before the first paint, so the first thing shown is the right moment.
+        if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+        const Y = "orkava.y:" + location.pathname;
+        const nav = performance.getEntriesByType?.("navigation")?.[0];
+        let y = 0;
+        if (!capture && nav && (nav.type === "reload" || nav.type === "back_forward")) {
+          try { y = Math.max(0, Number(sessionStorage.getItem(Y)) || 0); } catch {}
+        }
+        addEventListener("pagehide", () => {
+          try { sessionStorage.setItem(Y, String(Math.round(scrollY))); } catch {}
+        });
+        if (y > 8) root.classList.add("restored");
+        // Nothing paints until the first screen is whole (the page script lifts the hold once
+        // the night still is decoded, or at a scrolled position at once); this is the backstop.
+        if (!capture) {
+          root.classList.add("hold");
+          setTimeout(() => root.classList.remove("hold"), 5000);
+        }
+        window.orkavaBoot = { story, verdict, y, capture, painted: () => onPainted() };
+      })();
+    </script>
+    <link rel="preload" as="image" href="stills/night-desktop-1x.webp" media="(min-width: 761px) and (max-resolution: 1.49dppx)" fetchpriority="high" />
+    <link rel="preload" as="image" href="stills/night-desktop-2x.webp" media="(min-width: 761px) and (min-resolution: 1.5dppx)" fetchpriority="high" />
+    <link rel="preload" as="image" href="stills/night-phone.webp" media="(max-width: 760px)" fetchpriority="high" />
+    <style>
+      /* The page is one night turning into one morning across the whole scroll. The story
+         script moves these tokens with the sky; these are the night values. --bg is the sky at
+         the top of the screen. */
+      :root {
+        --bg: #0e0f12;
+        --ink: #f8f8f5;
+        --body: #c4c7cd;
+        --muted: #8b919c;
+        --line: rgba(248, 248, 245, 0.08);
+        --field: #ffffff;
+        --field-ink: #111827;
+        --field-line: rgba(17, 24, 39, 0.16);
+        --field-line-hover: rgba(17, 24, 39, 0.32);
+        --error: #b42318;
+        --grade: 1;
+        --head: 64px;
+        --gutter: clamp(24px, 5.6vw, 92px);
+        --col: min(480px, 36vw);
+        --col-edge: calc(var(--gutter) + var(--col) + 24px);
+        --feather: 10vw;
+        --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+      * { box-sizing: border-box; }
+      html { background: var(--bg); scrollbar-width: none; }
+      html::-webkit-scrollbar { display: none; }
+      @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      a { color: inherit; text-decoration: none; }
+
+      /* Nothing paints until the first screen is whole (see the boot script). */
+      html.hold { display: none; }
+      /* the page arrives in its state: nothing transitions into it on the first frames */
+      html.hold *, html.arriving * { transition: none !important; }
+
+      /* ── Scene layers: the sky, the stills, the canvas, the stage box, the grade, the scrim.
+         The night still sits in a box the size of the first screen; the scene projects its
+         first screen (and the close) into the same box, so the live canvas lands exactly on
+         it. The still's sky is transparent: under it, the stars are drawn by the page from the
+         same hash the scene's sky uses, so the two are one picture. */
+      .poster {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100vh;
+        z-index: 0; pointer-events: none; overflow: hidden;
+      }
+      .poster-img {
+        position: absolute; display: block; max-width: none; height: auto;
+        --a: var(--a-d, 1.5); --wmax: var(--wmax-d, 100vw);
+        --l: calc(var(--col-edge) + 2vw); --r: 40px; --t: calc(var(--head) + 5vh); --b: 9vh;
+        --w: min(calc(100vw - var(--l) - var(--r)), calc((100vh - var(--t) - var(--b)) * var(--a)), var(--wmax));
+        --cx: calc((var(--l) + 100vw - var(--r)) / 2);
+        --cy: calc((var(--t) + 100vh - var(--b)) / 2);
+        --g: 1px;
+        width: var(--w); left: calc(var(--cx) - var(--w) / 2); top: calc(var(--cy) - var(--w) / var(--a) / 2);
+      }
+      @supports (width: round(1.5px, 1px)) {
+        .poster-img {
+          width: round(var(--w), var(--g));
+          height: round(calc(round(var(--w), var(--g)) / var(--a)), var(--g));
+          left: round(calc(var(--cx) - round(var(--w), var(--g)) / 2), var(--g));
+          top: round(calc(var(--cy) - round(var(--w), var(--g)) / var(--a) / 2), var(--g));
+        }
+      }
+      /* a still that arrives after the page was shown (a very slow connection) settles in */
+      .poster picture { transition: opacity 0.4s ease; }
+      .late-still .poster.night picture { opacity: 0; }
+
+      #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: none; z-index: 0; opacity: 0; }
+      /* The sky before the scene: the same field the scene's sky paints, as a gradient, so a
+         page opened part way through the night already has its tone. */
+      .sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; }
+      /* Where the full-width shots are framed (read by the scene, never painted): the whole
+         width, clear of the header above. */
+      .stage {
+        position: fixed; visibility: hidden; pointer-events: none;
+        left: 32px; right: 32px; top: calc(var(--head) + 2vh); bottom: 6vh;
+      }
+      /* The page behind the text column on the first and last screens, feathering into the scene. */
+      .scrim {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100vh; z-index: 1; pointer-events: none;
+        background: linear-gradient(90deg, var(--bg) var(--col-edge), transparent calc(var(--col-edge) + var(--feather)));
+      }
+      /* Night grade over the scene: a vignette toward the frame edges and a fixed fine grain.
+         It lifts with the sun. */
+      .grade {
+        position: absolute; left: 0; top: 0; width: 100%; height: 100vh;
+        z-index: 1; pointer-events: none; mix-blend-mode: soft-light; opacity: var(--grade);
+        background: radial-gradient(120% 95% at 60% 52%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.85) 100%);
+      }
+      .grade::after {
+        content: ""; position: absolute; inset: 0; opacity: 0.16;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 1.4 -.2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      #ov { display: none; }
+
+      .site-header {
+        position: sticky; top: 0; z-index: 10;
+        background: color-mix(in srgb, var(--bg) 80%, transparent);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      .header-inner { display: flex; align-items: center; justify-content: space-between; height: var(--head); padding: 0 var(--gutter); }
+      .site-header, .brand, .header-nav a { transition: color 0.3s ease, background-color 0.3s ease; }
+      .brand { display: inline-flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 650; letter-spacing: -0.01em; }
+      .brand svg { width: 26px; height: 26px; flex: none; display: block; }
+      .header-nav a { color: var(--ink); opacity: 0.78; font-size: 14.5px; font-weight: 500; }
+      .header-nav a:hover { opacity: 1; }
+
+      main { position: relative; z-index: 2; }
+      .sec { position: relative; padding: 0 var(--gutter); }
+
+      /* ── Text */
+      .beats { list-style: none; margin: 0; padding: 0; }
+      h1 {
+        margin: 0;
+        font-size: min(3.5vw, 50px);
+        font-weight: 700;
+        letter-spacing: -0.035em;
+        line-height: 1.05;
+      }
+      .block .hero-sub { margin: 20px 0 0; color: var(--body); font-size: 19px; }
+      .eyebrow {
+        margin: 0 0 14px; color: var(--muted);
+        font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+      }
+      h2 {
+        margin: 0 0 18px;
+        font-size: clamp(32px, 3.2vw, 46px);
+        font-weight: 700; letter-spacing: -0.03em; line-height: 1.06;
+      }
+      .block p { margin: 0; color: var(--body); font-size: 18px; line-height: 1.55; }
+      .beats strong {
+        display: block; color: var(--ink);
+        font-size: clamp(26px, 2.4vw, 34px); font-weight: 700; letter-spacing: -0.025em; line-height: 1.1;
+      }
+      .button {
+        display: inline-block; background: var(--ink); color: var(--bg);
+        border-radius: 999px; padding: 13px 26px; font-size: 15px; font-weight: 600;
+      }
+      .button:hover { opacity: 0.88; }
+
+      /* ── The plain page: the night first screen, the copy as an ordinary page through the
+         sunrise, and the form beside the open pharmacy in the morning. */
+      /* (the header's hairline sits over the hero, so the words land where the story's do) */
+      .hero { min-height: calc(100vh - var(--head)); margin-top: -1px; }
+      /* placed as the story places it (centred on the screen below the header, by the same
+         arithmetic), so the two first screens are the same picture to the pixel */
+      .hero .block { position: absolute; left: var(--gutter); width: var(--col); top: calc(50vh - var(--head) / 2); transform: translateY(-50%); }
+      .movein, .dawn, .beat-key { display: none; }
+      .mess { padding: clamp(96px, 17vh, 168px) var(--gutter); }
+      .mess .block, .intro .block { max-width: 600px; }
+      .day-side {
+        --bg: #f8f8f5; --ink: #111827; --body: #3d4451; --muted: #667085; --line: rgba(17, 24, 39, 0.08);
+        background: var(--bg); color: var(--ink);
+      }
+      /* the sky lifts from ink to paper above the product, in the scene's own tones */
+      #producto {
+        padding-top: 300px;
+        background: linear-gradient(180deg, #0e0f12 0, #2e323a 90px, #7c7e83 170px, #d1d0cb 240px, #f8f8f5 300px);
+      }
+      .intro { padding-top: clamp(40px, 8vh, 80px); padding-bottom: clamp(56px, 9vh, 88px); }
+      .beats-sec { padding-bottom: clamp(32px, 6vh, 72px); }
+      .beats.block { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 44px 64px; max-width: 1040px; }
+      .beats li { border-top: 1px solid var(--field-line); padding-top: 22px; }
+      .beats .say { display: block; margin-top: 12px; }
+      .close { position: relative; min-height: 100vh; display: flex; align-items: center; }
+      .close .block { position: relative; z-index: 2; width: var(--col); padding: calc(var(--head) + 48px) 0 72px; }
+      .poster.day { height: 100vh; }
+
+      /* ── Contact form. Without scripts it cannot post (the API takes JSON), so a sentence
+         with the address stands in for it. The form and its confirmation share one grid cell,
+         so the confirmation takes the form's place without moving the heading. */
+      html:not(.js) .contact-js { display: none; }
+      .contact { display: grid; margin-top: 22px; }
+      .contact > * { grid-area: 1 / 1; min-width: 0; }
+      .contact-form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; align-content: start; color-scheme: light; }
+      .contact.is-sent .contact-form { visibility: hidden; }
+      .field { display: grid; gap: 6px; align-content: start; min-width: 0; }
+      .field.wide, .form-foot { grid-column: 1 / -1; }
+      .field label { display: flex; align-items: baseline; gap: 8px; color: var(--ink); font-size: 13.5px; font-weight: 600; letter-spacing: 0.005em; line-height: 1.3; }
+      .field .opt { color: var(--muted); font-size: 12.5px; font-weight: 450; letter-spacing: 0.01em; }
+      .field input, .field textarea {
+        display: block; width: 100%; margin: 0; min-height: 46px; padding: 11px 13px;
+        font: inherit; font-size: 16px; line-height: 1.4; color: var(--field-ink);
+        background: var(--field); border: 1px solid var(--field-line); border-radius: 8px;
+        transition: border-color 0.15s ease;
+        scroll-margin: calc(var(--head) + 40px) 0 24px;
+      }
+      .field textarea { min-height: calc(2 * 1.4em + 24px); resize: vertical; }
+      .field input:hover, .field textarea:hover { border-color: var(--field-line-hover); }
+      .field input:focus, .field textarea:focus { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+      .field input:autofill { box-shadow: 0 0 0 40px var(--field) inset; -webkit-text-fill-color: var(--field-ink); }
+      .form-foot { display: grid; justify-items: start; gap: 12px; margin-top: 6px; }
+      .contact-form .button { min-height: 46px; min-width: 120px; border: 0; font-family: inherit; line-height: 20px; cursor: pointer; }
+      .contact-form .button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+      .contact-form .button:disabled { opacity: 0.55; cursor: progress; }
+      .block .contact-error { color: var(--error); font-size: 14.5px; line-height: 1.5; }
+      .block .contact-error:empty { display: none; }
+      .contact-error a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+      .contact-done { align-self: start; outline: none; }
+      .block .done-text { color: var(--ink); font-size: 21px; font-weight: 650; letter-spacing: -0.015em; line-height: 1.3; }
+      .block .done-text:not(:empty) { padding-top: 14px; border-top: 1px solid var(--field-line); }
+      .block .done-note { margin-top: 8px; color: var(--muted); font-size: 13.5px; }
+      .block .done-note:empty { display: none; }
+      .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+      /* ── Scroll hint: a mouse with a travelling dot (a bouncing chevron on touch screens) at
+         the bottom of the first screen, gone once the visitor scrolls. While the story waits
+         for its scene the page does not scroll (html.wait, see the story script), and the
+         hint's place holds three quiet dots instead; the hint comes with the scene. */
+      .scroll-hint {
+        position: fixed; z-index: 3; left: 50%; bottom: 28px; translate: -50% 0;
+        color: var(--muted); pointer-events: none; transition: opacity 0.3s ease;
+      }
+      html:not(.js) .scroll-hint { display: none; }
+      .scrolled:not(.wait) .scroll-hint { opacity: 0; }
+      html.wait { overflow: hidden; }
+      .scroll-hint .mouse, .scroll-hint .chevron { transition: opacity 0.5s ease 0.2s; }
+      .wait .scroll-hint .mouse, .wait .scroll-hint .chevron { opacity: 0; transition: none; }
+      .wait-mark {
+        position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+        display: flex; gap: 5px; opacity: 0; transition: opacity 0.25s ease;
+      }
+      .wait .wait-mark { opacity: 1; }
+      .wait-mark i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.3; animation: wait-dot 1.2s ease-in-out infinite; }
+      .wait-mark i:nth-child(2) { animation-delay: 0.16s; }
+      .wait-mark i:nth-child(3) { animation-delay: 0.32s; }
+      @keyframes wait-dot { 0%, 70%, 100% { opacity: 0.3; } 35% { opacity: 1; } }
+      .scroll-hint .mouse { display: block; position: relative; width: 22px; height: 34px; border: 1.5px solid currentColor; border-radius: 11px; }
+      .scroll-hint .mouse::after {
+        content: ""; position: absolute; left: 50%; top: 6px; width: 3px; height: 6px; margin-left: -1.5px;
+        border-radius: 2px; background: currentColor; animation: hint-wheel 1.8s ease-in-out infinite;
+      }
+      .scroll-hint .chevron { display: none; width: 22px; height: 12px; animation: hint-bounce 1.8s ease-in-out infinite; }
+      @keyframes hint-wheel { 0% { opacity: 0; transform: none; } 20% { opacity: 1; } 75%, 100% { opacity: 0; transform: translateY(11px); } }
+      @keyframes hint-bounce { 0%, 100% { transform: none; } 50% { transform: translateY(6px); } }
+      @media (hover: none) and (pointer: coarse) {
+        .scroll-hint .mouse { display: none; }
+        .scroll-hint .chevron { display: block; }
+      }
+
+      .site-footer { position: relative; z-index: 4; background: #08090b; color: #fff; border-top: 1px solid var(--line); }
+      .footer-inner {
+        display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+        padding: 32px var(--gutter) 24px;
+      }
+      .site-footer a { color: #fff; }
+      .site-footer a:hover { text-decoration: underline; }
+      .footer-links { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 24px; font-size: 14.5px; color: rgba(255, 255, 255, 0.78); }
+      .footer-bottom {
+        margin: 0 var(--gutter); border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px 0 28px; color: rgba(255, 255, 255, 0.45); font-size: 13px;
+      }
+
+      /* ── The story: the scene is the page. The first and last screens keep their words in a
+         fixed column; in between, the scene has the full width and the words are spoken (Orky's
+         bubble, see the overlay). The copy stays in the DOM in order, only visually hidden. */
+      .story .sky, .story #scene { display: block; }
+      .story.live #scene { opacity: 1; }
+      .story.live.fade #scene { transition: opacity 0.5s ease; }
+      /* the canvas has taken over: the still under it goes once the canvas has painted */
+      .story.live .poster { visibility: hidden; transition: visibility 0s 0.45s; }
+      .story.live.fade .poster, .story.restored .poster { visibility: hidden; transition: none; }
+      .story .poster.day { display: none; }
+      .story .scrim { position: fixed; inset: 0; width: auto; height: auto; opacity: 0; transition: opacity 0.45s ease; }
+      html.story:not(.scrolled)[data-chapter="0"] .scrim, html.story[data-chapter="9"] .scrim { opacity: 1; }
+      .story .grade { position: fixed; inset: 0; width: auto; height: auto; }
+      .story #ov { display: block; position: fixed; inset: 0; z-index: 3; pointer-events: none; color: var(--ink); opacity: 0; }
+      .story.live #ov { opacity: 1; transition: opacity 0.5s ease; }
+      .story .day-side { background: none; color: inherit; --bg: inherit; --ink: inherit; --body: inherit; --muted: inherit; --line: inherit; }
+      .story #producto { padding-top: 0; background: none; }
+      .story .intro, .story .mess, .story .beats-sec { padding-top: 0; padding-bottom: 0; }
+      .story .movein, .story .dawn, .story .beat-key { display: block; }
+
+      .story .hero { height: 50vh; min-height: 0; display: block; margin-top: 0; }
+      .story .movein { height: 70vh; }
+      .story .mess { height: 105vh; }
+      .story .intro { height: 115vh; }
+      .story .beat-key { height: 100vh; }
+      /* The ending plays by itself (see the scene), so the page stops just after the last beat:
+         the shop-opening section takes no scroll and the last one only makes room for the footer. */
+      .story .dawn { height: 0; }
+      .story .close { height: 66vh; min-height: 0; display: block; }
+      .story .block, .story .beats.block, .story .close .block {
+        position: fixed; z-index: 3; left: var(--gutter); width: var(--col); max-width: none; padding: 0;
+        display: block; top: calc(50% + var(--head) / 2); translate: 0 var(--lift, 0px);
+        opacity: 0; transform: translateY(calc(-50% + 12px)); pointer-events: none;
+        transition: opacity 0.12s ease, transform 0s linear 0.12s;
+      }
+      .story .beats li { border: 0; padding: 0; }
+      .story .beats li + li { margin-top: 20px; }
+      .story .beats .say { display: inline; margin: 0; }
+      .story .block.is-on {
+        opacity: 1; transform: translateY(-50%); pointer-events: auto;
+        transition: opacity 0.26s ease 0.12s, transform 0.3s cubic-bezier(0.2, 0.7, 0.25, 1) 0.12s;
+      }
+      .story .block.spoken, .story .block.spoken.is-on { opacity: 0; pointer-events: none; }
+      /* the headline leaves as soon as the visitor scrolls */
+      .story.scrolled .hero .block.is-on {
+        opacity: 0; translate: -36px 0; pointer-events: none;
+        transition: opacity 0.3s ease, translate 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .story .hero .block.is-on { transition: opacity 0.4s ease, translate 0.5s cubic-bezier(0.2, 0.7, 0.25, 1); }
+
+      /* ── The overlay: Orky's bubble, one at a time */
+      .ovh { position: absolute; left: 0; top: 0; will-change: transform; transition: opacity 0.2s ease; }
+      .say .bub {
+        position: absolute; left: 0; top: 0; background: #fff; color: #0e0f12; border: 1.5px solid #0e0f12;
+        border-radius: 16px; padding: 12px 18px; width: max-content; max-width: 320px;
+        font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2;
+        transform-origin: var(--ox, 0%) var(--oy, 100%);
+      }
+      .say .bub::after { content: ""; position: absolute; width: 16px; height: 16px; background: #fff; border: 1.5px solid #0e0f12; border-width: 0 1.5px 1.5px 0; }
+      .say.d .bub::after { bottom: -9.5px; transform: rotate(45deg); }
+      .say.u .bub::after { top: -9.5px; transform: rotate(225deg); }
+      .say.r .bub::after { left: 20px; }
+      .say.l .bub::after { right: 20px; }
+      .say .bub.pop { animation: pop 0.34s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+      @keyframes pop { from { transform: scale(0.55); opacity: 0; } 40% { opacity: 1; } to { transform: scale(1); } }
+
+      /* the maquette turns under a drag; vertical scrolling stays the browser's */
+      html.gl body { touch-action: pan-y; }
+      html.gl main { cursor: grab; }
+      html.dragging, html.dragging main { cursor: grabbing; user-select: none; }
+
+      @media (max-width: 760px) {
+        :root { --panel: 54; }
+        .poster-img {
+          --a: var(--a-p, 1.5); --wmax: var(--wmax-p, 100vw);
+          --t: calc(var(--head) + 3vh); --b: calc(100vh - var(--panel) * 1vh + 2vh);
+          --w: min(calc(100vw - 24px), calc((100vh - var(--t) - var(--b)) * var(--a)), var(--wmax));
+          --cx: 50vw;
+          --cy: calc((var(--t) + 100vh - var(--b)) / 2);
+          --g: 2px;
+        }
+        .stage { left: 8px; right: 8px; top: calc(var(--head) + 2vh); bottom: 10vh; }
+        .scrim { background: linear-gradient(180deg, transparent calc(var(--panel) * 1% - 9vh), var(--bg) calc(var(--panel) * 1%)); }
+
+        h1 { font-size: 34px; }
+        .block .hero-sub { margin-top: 14px; font-size: 17px; }
+        h2 { font-size: 30px; margin-bottom: 14px; }
+        .block p { font-size: 16.5px; }
+        .contact-form { grid-template-columns: 1fr; gap: 14px; }
+        .contact.is-sent .contact-form { display: none; }
+        .block .done-text { font-size: 19px; }
+        .say .bub { max-width: 210px; padding: 9px 13px; font-size: 16px; border-radius: 13px; }
+        .footer-inner { flex-direction: column; align-items: flex-start; }
+
+        /* the plain page: the model in the top of the screen, the words under it */
+        .hero { display: block; min-height: calc(100vh - var(--head)); padding-top: calc(var(--panel) * 1vh + 6px - var(--head)); }
+        .hero .block { position: static; width: auto; transform: none; }
+        .mess { padding: 88px var(--gutter); }
+        #producto { padding-top: 220px; background: linear-gradient(180deg, #0e0f12 0, #2e323a 70px, #7c7e83 130px, #d1d0cb 180px, #f8f8f5 220px); }
+        .beats.block { grid-template-columns: 1fr; gap: 32px; }
+        .beats-sec { padding-bottom: 8px; }
+        .close { display: block; padding-top: calc(var(--panel) * 1vh + 6px); }
+        .close .block { width: auto; padding: 0 0 56px; }
+
+        .story .hero { padding-top: 0; }
+        .story .block, .story .beats.block, .story .close .block {
+          left: var(--gutter); right: var(--gutter); width: auto;
+          top: calc(var(--panel) * 1% + 6px); transform: translateY(10px);
+        }
+        .story .block.is-on { transform: none; }
+        /* The form is taller than the panel under the model, so the last block runs in the
+           page: it switches on where the headline sat, then scrolls up over the model, and the
+           footer follows it. */
+        .story .close { height: auto; padding-top: calc(var(--panel) * 1vh + 6px); }
+        .story .close .block, .story .close .block.is-on {
+          position: relative; left: auto; right: auto; top: auto; width: auto;
+          margin: 0 calc(-1 * var(--gutter));
+          padding: 0 var(--gutter) 56px; background: var(--bg);
+          transform: none; translate: none;
+        }
+        .story .close .block::before {
+          content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 48px; pointer-events: none;
+          background: linear-gradient(180deg, transparent, var(--bg));
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .story .block, .story .block.is-on, .story.scrolled .hero .block.is-on, .scroll-hint { transition: none !important; }
+        .scroll-hint .mouse::after, .scroll-hint .chevron { animation: none; }
+        .wait-mark i { animation: none; opacity: 0.6; }
+        .say .bub.pop { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="ok-light" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF" /><stop offset="1" stop-color="#E8E8E5" /></linearGradient>
+        <linearGradient id="ok-mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9C9C5" /><stop offset="1" stop-color="#A6A6A1" /></linearGradient>
+        <symbol id="orky" viewBox="0 0 200 200">
+          <path d="M100 14 L186 60 L186 140 L100 186 Z" fill="#0E0F12" />
+          <path d="M100 14 L14 60 L14 140 L100 186 Z" fill="url(#ok-light)" style="stroke: var(--ink)" stroke-width="3" stroke-linejoin="round" />
+          <path d="M100 14 L14 60 L100 60 L186 60 Z" fill="url(#ok-mid)" style="stroke: var(--ink)" stroke-width="3" stroke-linejoin="round" />
+          <ellipse cx="60" cy="110" rx="22" ry="26" fill="#0E0F12" />
+          <ellipse cx="60" cy="110" rx="9" ry="12" fill="url(#ok-light)" />
+          <path d="M100 14 L186 60 L186 140 L100 186 L14 140 L14 60 Z" fill="none" style="stroke: var(--ink)" stroke-width="5" stroke-linejoin="round" />
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="sky" aria-hidden="true"></div>
+    <div class="poster night" aria-hidden="true">
+      <!-- still:night -->
+      <picture><source media="(max-width: 760px)" srcset="stills/night-phone.webp" /><source media="(min-resolution: 1.5dppx)" srcset="stills/night-desktop-2x.webp" /><img class="poster-img" src="stills/night-desktop-1x.webp" alt="" data-r-d="-0.215353,-0.159284,0.219995,0.135005" data-s-d="1807.7501" data-r-p="-0.215353,-0.159634,0.219995,0.135355" data-s-p="840.7071" style="--a-d: 1.47932; --wmax-d: 787px; --a-p: 1.47581; --wmax-p: 366px" fetchpriority="high" /></picture>
+      <!-- /still:night -->
+    </div>
+    <canvas id="scene" aria-hidden="true"></canvas>
+    <div class="stage" aria-hidden="true"></div>
+    <div class="grade" aria-hidden="true"></div>
+    <div class="scrim" aria-hidden="true"></div>
+    <div id="ov" aria-hidden="true"></div>
+    <div class="scroll-hint" aria-hidden="true">
+      <span class="wait-mark"><i></i><i></i><i></i></span>
+      <span class="mouse"></span>
+      <svg class="chevron" viewBox="0 0 22 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 2l9 8 9-8" /></svg>
+    </div>
+
     <header class="site-header">
-      <div class="container header-inner">
+      <div class="header-inner">
         <a class="brand" href="index.html">
-          <img class="brand-mark" src="orky.svg" alt="" />
+          <svg viewBox="0 0 200 200" aria-hidden="true"><use href="#orky" /></svg>
           <span>Orkava</span>
         </a>
-        <nav class="header-nav">
-          <a href="mailto:help@orkava.app">help@orkava.app</a>
-        </nav>
+        <nav class="header-nav"><a href="#contacto">Contactar</a></nav>
       </div>
     </header>
 
     <main>
-      <section class="hero">
-        <div class="container">
-          <h1>Inteligencia artificial<br />para farmacias</h1>
-          <p class="hero-sub">
-            Orkava es un sistema automatizado para tu farmacia: unifica los
-            mensajes de WhatsApp, Facebook e Instagram, envía avisos y
-            novedades del programa de puntos, y publica en redes por ti.
-          </p>
+      <section class="sec hero" id="mostrador" data-key>
+        <div class="block is-on">
+          <h1>Tú, en el mostrador.<br />Orkava, en la rebotica.</h1>
+          <p class="hero-sub">Inteligencia artificial para farmacias.</p>
         </div>
       </section>
 
-      <section class="section" id="producto">
-        <div class="container">
-          <p class="eyebrow">Qué es Orkava</p>
-          <h2>Un sistema automatizado para tu farmacia</h2>
-          <p class="section-lead">
-            Orkava conecta las cuentas de la farmacia — su número de WhatsApp
-            Business, su página de Facebook y su Instagram — y automatiza la
-            comunicación con sus clientes. Cada cuenta sigue siendo de la
-            farmacia.
-          </p>
-          <ul class="feature-list">
-            <li>
-              <strong>Buzón único.</strong>
-              Todos los mensajes y comentarios de clientes, en un solo sitio.
-            </li>
-            <li>
-              <strong>Avisos automáticos.</strong>
-              Recetas y encargos listos para recoger, recordatorios y puntos.
-            </li>
-            <li>
-              <strong>Publicación en redes.</strong>
-              Publicaciones para Facebook e Instagram, revisadas por ti.
-            </li>
-            <li>
-              <strong>Integración con tu ERP.</strong>
-              Clientes, ventas y stock siempre al día.
-            </li>
-          </ul>
+      <div class="sec movein" data-key></div>
+
+      <section class="sec mess" id="rebotica" data-key>
+        <div class="block spoken">
+          <p class="eyebrow">La rebotica</p>
+          <h2>El trabajo que no se ve</h2>
+          <p>Mensajes por contestar, encargos por avisar, redes por publicar, datos por cuadrar. Todo lo que se acumula detrás del mostrador.</p>
         </div>
       </section>
 
-      <section class="section cta">
-        <div class="container">
+      <section id="producto" class="day-side">
+        <div class="sec intro" id="orkava" data-key data-orky>
+          <div class="block spoken">
+            <p class="eyebrow">Qué es Orkava</p>
+            <h2>Un sistema automatizado para tu farmacia</h2>
+            <p>Orkava conecta las cuentas de la farmacia — su número de WhatsApp Business, su página de Facebook y su Instagram — y automatiza la comunicación con sus clientes. Cada cuenta sigue siendo de la farmacia.</p>
+          </div>
+        </div>
+        <div class="sec beats-sec">
+          <ol class="beats block spoken">
+            <li><p><strong>Buzón único.</strong> <span class="say">Todos los mensajes y comentarios de clientes, en un solo sitio.</span></p></li>
+            <li><p><strong>Avisos automáticos.</strong> <span class="say">Recetas y encargos listos para recoger, recordatorios y puntos.</span></p></li>
+            <li><p><strong>Publicación en redes.</strong> <span class="say">Publicaciones para Facebook e Instagram, revisadas por ti.</span></p></li>
+            <li><p><strong>Tus datos.</strong> <span class="say">Clientes, ventas y stock siempre al día.</span></p></li>
+          </ol>
+          <div class="beat-key" id="buzon" data-key data-orky></div>
+          <div class="beat-key" id="avisos" data-key data-orky></div>
+          <div class="beat-key" id="redes" data-key data-orky></div>
+          <div class="beat-key" id="datos" data-key data-orky></div>
+        </div>
+      </section>
+
+      <div class="sec dawn" data-key></div>
+
+      <section class="sec close day-side" id="contacto" data-key>
+        <div class="poster day" aria-hidden="true">
+          <!-- still:day -->
+          <picture><source media="(max-width: 760px)" srcset="stills/day-phone.webp" /><source media="(min-resolution: 1.5dppx)" srcset="stills/day-desktop-2x.webp" /><img class="poster-img" src="stills/day-desktop-1x.webp" alt="" data-r-d="-0.215353,-0.159284,0.219995,0.135005" data-s-d="1807.7501" data-r-p="-0.215353,-0.159634,0.219995,0.135355" data-s-p="840.7071" style="--a-d: 1.47932; --wmax-d: 787px; --a-p: 1.47581; --wmax-p: 366px" loading="lazy" /></picture>
+          <!-- /still:day -->
+        </div>
+        <div class="block">
           <h2>¿Trabajas en una farmacia?</h2>
-          <p>Escríbenos a help@orkava.app y te lo enseñamos.</p>
-          <a class="button" href="mailto:help@orkava.app">Contactar</a>
+          <noscript><p>Escríbenos a <a href="mailto:help@orkava.app">help@orkava.app</a>.</p></noscript>
+          <p class="contact-js">Déjanos tus datos y te lo enseñamos.</p>
+          <div class="contact contact-js">
+            <form class="contact-form" action="/api/demo-requests" method="post">
+              <div class="field">
+                <label for="c-name">Nombre</label>
+                <input id="c-name" name="name" type="text" autocomplete="name" required />
+              </div>
+              <div class="field">
+                <label for="c-pharmacy">Farmacia <span class="opt">opcional</span></label>
+                <input id="c-pharmacy" name="pharmacyName" type="text" autocomplete="organization" />
+              </div>
+              <div class="field">
+                <label for="c-email">Email</label>
+                <input id="c-email" name="email" type="email" autocomplete="email" required />
+              </div>
+              <div class="field">
+                <label for="c-phone">Teléfono <span class="opt">opcional</span></label>
+                <input id="c-phone" name="phone" type="tel" autocomplete="tel" />
+              </div>
+              <div class="field wide">
+                <label for="c-message">Mensaje <span class="opt">opcional</span></label>
+                <textarea id="c-message" name="message" rows="2"></textarea>
+              </div>
+              <div class="hp" aria-hidden="true">
+                <label for="c-website">Web</label>
+                <input id="c-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+              </div>
+              <div class="form-foot">
+                <button class="button" type="submit">Enviar</button>
+                <p class="contact-error" role="alert"></p>
+              </div>
+            </form>
+            <div class="contact-done" role="status" tabindex="-1">
+              <p class="done-text"></p>
+              <p class="done-note"></p>
+            </div>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <div class="container footer-inner">
-        <a class="brand brand-light" href="index.html">
-          <img class="brand-mark" src="orky.svg" alt="" />
+      <div class="footer-inner">
+        <a class="brand" href="index.html">
+          <svg viewBox="0 0 200 200" aria-hidden="true"><use href="#orky" /></svg>
           <span>Orkava</span>
         </a>
         <ul class="footer-links">
@@ -95,7 +676,464 @@
           <li><a href="eliminacion-de-datos.html">Eliminación de datos</a></li>
         </ul>
       </div>
-      <div class="container footer-bottom">© 2026 ORKAVA TECHNOLOGIES SL</div>
+      <div class="footer-bottom">© 2026 ORKAVA TECHNOLOGIES SL</div>
     </footer>
+
+    <script>
+      // The story: which chapter is active, the words, and the colour of the page. It needs no
+      // 3D, so the words and the sky work even when three.js never arrives.
+      //
+      // Chapters (story time T reaches chapter k at T = k): 0 the closed pharmacy, 1 the
+      // move-in, 2 the mess, 3 Orky, 4-7 the four beats, 8 the shop opens, 9 the close.
+      (() => {
+        const root = document.documentElement;
+        const keys = [...document.querySelectorAll("[data-key]")];
+        const N = keys.length;
+        const beats = document.querySelector(".beats");
+        const blockOf = keys.map((el) => el.querySelector(".block") || (el.classList.contains("beat-key") ? beats : null));
+        const blocks = [...new Set(blockOf.filter(Boolean))];
+        const footer = document.querySelector(".site-footer");
+        // Story time: chapter k's shot is reached at T = k (its section top). The camera holds
+        // there until T = k + HOLD, then travels to the next shot.
+        const HOLD = 0.5, EPS = 0.015;
+        let knots = [[0, 0]], arrive = keys.map(() => 0), active = -1;
+
+        function measure() {
+          const vh = innerHeight;
+          const max = Math.max(1, root.scrollHeight - vh);
+          const travel = 0.42 * vh;
+          const tops = keys.map((el) => el.getBoundingClientRect().top + scrollY);
+          arrive = tops.map((t, i) => (i === 0 ? 0 : Math.min(max, t)));
+          // The last chapter (the contact form) is reached before its section comes up: the
+          // shop opens and the camera settles within the first 40vh of the one before it, so
+          // the form is on screen as soon as the customer is inside.
+          arrive[N - 1] = Math.min(max, arrive[N - 2] + 0.4 * vh);
+          knots = [[0, 0], [0, HOLD]];
+          for (let i = 1; i < N; i++) {
+            knots.push([arrive[i], i]);
+            if (i < N - 1) knots.push([Math.min(max, i === N - 2 ? arrive[i] + 0.1 * vh : tops[i + 1] - travel), i + HOLD]);
+          }
+          knots.push([max, N - 1]);
+          for (let k = 1; k < knots.length; k++) knots[k][0] = Math.max(knots[k][0], knots[k - 1][0]);
+        }
+        function storyT(y) {
+          if (y <= 0) return 0;
+          for (let k = 0; k < knots.length - 1; k++) {
+            const [y0, t0] = knots[k], [y1, t1] = knots[k + 1];
+            if (y < y1) return y1 > y0 ? t0 + ((t1 - t0) * (y - y0)) / (y1 - y0) : t1;
+          }
+          return knots[knots.length - 1][1];
+        }
+
+        // A chapter's words switch on once it has been active for a moment, so a long jump
+        // does not flash every chapter it passes.
+        const DWELL = 150;
+        let cand = -1, candAt = 0, lastT = 0, recheck = 0;
+        // force: switch at once (the page arriving at a restored position)
+        function apply(T, force = false) {
+          lastT = T;
+          // The contact form comes on as the camera starts to pull back from the last beat.
+          const k = T >= lastBeat + HOLD ? N - 1 : Math.max(0, Math.min(N - 1, Math.floor(T + EPS)));
+          const on = wordsOn(k, T);
+          if (k === active && on !== wordsShown) {
+            wordsShown = on;
+          }
+          story.wordsOn = wordsShown;
+          if (k === active) { cand = -1; return; }
+          const now = performance.now();
+          if (k !== cand) { cand = k; candAt = now; }
+          if (!force && active >= 0 && now - candAt < DWELL) {
+            clearTimeout(recheck);
+            recheck = setTimeout(() => apply(lastT), DWELL + 10);
+            return;
+          }
+          cand = -1;
+          active = k;
+          for (const b of blocks) b.classList.toggle("is-on", b === blockOf[k]);
+          root.dataset.chapter = k;
+          wordsShown = wordsOn(k, T);
+          story.wordsOn = wordsShown;
+        }
+
+        // ── The sky, which is the page. Scrolling is time passing: story time T runs from the
+        // closed pharmacy at night (0) to the open one in the morning (9), and every value here
+        // only grows with it. Light arrives from one side, below the horizon where the sun will
+        // rise: the sky's lift at a point is A - G * (its distance from there, in screen
+        // heights), so a band of dawn climbs across the page, and A ends high and G at zero, all
+        // paper. The scene's sky shader computes the same field from the same numbers.
+        const sst = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+        const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+        const css = (c) => "#" + c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
+        // per chapter: [daylight, A, G, warmth]. Daylight drives the scene's light: night through
+        // the mess, the sky lifting as Orky arrives, sunrise at the second beat, morning at the
+        // close.
+        const SKY_KNOTS = [
+          [0.0, -0.3, 0.5, 0], // the closed pharmacy: deep night
+          [0.02, -0.22, 0.5, 0], // move-in
+          [0.06, -0.06, 0.5, 0], // the mess: night
+          [0.16, 0.2, 0.5, 0.05], // Orky: late night, the sky beginning to lift
+          [0.32, 0.4, 0.38, 0.3], // Buzón único: before dawn
+          [0.5, 0.76, 0.34, 1], // Avisos automáticos: sunrise
+          [0.64, 0.97, 0.3, 0.75], // Publicación en redes: early morning
+          [0.77, 1.05, 0.17, 0.3], // Tus datos: morning
+          [0.9, 1.08, 0.05, 0.08], // the shop opens
+          [1, 1.12, 0, 0], // the close: bright morning
+        ];
+        const skyState = (T) => {
+          const t = Math.min(SKY_KNOTS.length - 1, Math.max(0, T));
+          const i = Math.min(SKY_KNOTS.length - 2, Math.floor(t)), u = t - i;
+          const [a, b] = [SKY_KNOTS[i], SKY_KNOTS[i + 1]];
+          const v = a.map((x, k) => x + (b[k] - x) * u);
+          return { day: v[0], A: v[1], G: v[2], warm: v[3] };
+        };
+        // the sky's tones, from ink to paper, near monochrome; warmth adds a trace of colour in
+        // the first sunlight without changing the tone's brightness
+        const RAMP = [[0, "#0e0f12"], [0.3, "#2e323a"], [0.55, "#7c7e83"], [0.8, "#d1d0cb"], [1, "#f8f8f5"]].map(([s, h]) => [s, hex(h)]);
+        const TINT = [9, 1, -10];
+        function skyColor(s, warm) {
+          let i = 0;
+          while (i < RAMP.length - 2 && s > RAMP[i + 1][0]) i++;
+          const u = (s - RAMP[i][0]) / (RAMP[i + 1][0] - RAMP[i][0]);
+          const w = warm * 4 * s * (1 - s);
+          return RAMP[i][1].map((v, k) => v + (RAMP[i + 1][1][k] - v) * u + TINT[k] * w);
+        }
+        // the sky's lift at a point in CSS pixels (y down), with the light's foot at sunX (a
+        // share of the width) a tenth of a screen below the bottom edge
+        const SKY = { A: -0.3, G: 0.5, warm: 0, day: 0, sunX: 0.04 };
+        function skyAt(x, y) {
+          const vh = innerHeight;
+          const d = Math.hypot((x - SKY.sunX * innerWidth) / vh, (vh - y + 0.1 * vh) / vh);
+          return Math.min(1, Math.max(0, SKY.A - SKY.G * d));
+        }
+        const lum = (c) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+        const NIGHT = { ink: "#f8f8f5", body: "#c4c7cd", muted: "#8b919c" };
+        const DAY = { ink: "#111827", body: "#3d4451", muted: "#667085" };
+        let headDay = null, skyKey = "";
+        // The header and the column on the first and last screens stand on the sky at the top
+        // of the screen; their ink turns from light to dark where that sky passes mid-grey.
+        function setSky(T) {
+          Object.assign(SKY, skyState(T));
+          const top = skyColor(skyAt(innerWidth / 2, 0), SKY.warm);
+          const bg = css(top);
+          const key = bg + SKY.day.toFixed(3);
+          if (key === skyKey) return;
+          skyKey = key;
+          root.style.setProperty("--bg", bg);
+          // until the scene shows, the sky layer paints the same field (a ring every tenth of
+          // a screen height, out from the light's foot); once it shows, the canvas covers it
+          if (!story.driven) {
+            const vh = innerHeight, x = SKY.sunX * innerWidth, y = 1.1 * vh;
+            const far = Math.hypot(Math.max(x, innerWidth - x), y) / vh;
+            const stops = [];
+            for (let d = 0; d <= far + 0.1; d += 0.1) {
+              stops.push(`${css(skyColor(Math.min(1, Math.max(0, SKY.A - SKY.G * d)), SKY.warm))} ${(d * vh).toFixed(1)}px`);
+            }
+            skyEl.style.background = `radial-gradient(circle at ${x.toFixed(1)}px ${y.toFixed(1)}px, ${stops.join(", ")})`;
+          }
+          const day = lum(top) > 0.45;
+          if (day !== headDay) {
+            headDay = day;
+            const P = day ? DAY : NIGHT;
+            for (const k in P) root.style.setProperty(`--${k}`, P[k]);
+            root.style.setProperty("--line", day ? "rgba(17,24,39,.08)" : "rgba(248,248,245,.08)");
+          }
+          root.style.setProperty("--grade", (1 - sst(SKY.day, 0.1, 0.6)).toFixed(3));
+        }
+        // The last beat's words leave with its beat, as the camera pulls back for the morning.
+        const lastBeat = keys.findIndex((el) => el.id === "datos");
+        const wordsOn = (k, T) => !(k === lastBeat && T - k > 0.62);
+        let wordsShown = true;
+
+        const skyEl = document.querySelector(".sky");
+        let released = false;
+        const isStory = () => root.classList.contains("story");
+        function onScroll() {
+          root.classList.toggle("scrolled", scrollY > 8);
+          if (!isStory() || !released) return;
+          if (!story.driven) {
+            const T = storyT(scrollY);
+            apply(T);
+            setSky(T);
+          }
+          // the footer pushes the last words up instead of covering them (a phone's last block
+          // runs in the page, so the footer never reaches it)
+          const b = blockOf[N - 1];
+          if (getComputedStyle(b).position !== "fixed") return;
+          const r = b.getBoundingClientRect();
+          const lift = Math.min(0, footer.getBoundingClientRect().top - 24 - (r.bottom - (parseFloat(b.style.getPropertyValue("--lift")) || 0)));
+          b.style.setProperty("--lift", `${lift.toFixed(1)}px`);
+        }
+        // How many device pixels per CSS pixel the scene draws at: the stills are made at these
+        // (phone 1.5, desktop 1 or 2), so the canvas lands on them pixel for pixel.
+        const narrowMQ = matchMedia("(max-width: 760px)");
+        const pixelRatio = () => (narrowMQ.matches ? 1.5 : devicePixelRatio >= 1.5 ? 2 : 1);
+        // frames: how many frames the scene has drawn (it draws only when the picture changes)
+        const story = (window.rebotica = {
+          storyT, apply, setSky, skyState, SKY, RAMP, TINT, pixelRatio, unlock,
+          driven: false, held: false, wordsOn: true, frames: 0,
+          get active() { return active; },
+        });
+        // keyboard focus in a hidden block brings its chapter on screen
+        document.addEventListener("focusin", (e) => {
+          const k = blockOf.findIndex((b) => b && b.contains(e.target));
+          if (isStory() && !waiting() && k >= 0 && blockOf[k] !== blockOf[active]) scrollTo({ top: arrive[k] + 2 });
+        });
+
+        // ── Waiting for the scene. Until the live scene has taken over from the still (the
+        // cross comes on), the story does not scroll by any means: html.wait clips the page,
+        // and wheel, touch, keys, in-page links and focus moves are held at the position the
+        // page arrived at (the top, or where a reload restored it). The scene calls unlock;
+        // the plain page, which never waits, unlocks too, and so does giving up on a scene
+        // that is not live within six seconds.
+        const lock = new AbortController();
+        const waiting = () => root.classList.contains("wait");
+        let heldY = null;
+        const hold = (e) => e.cancelable && e.preventDefault();
+        const KEYS = new Set([" ", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "Home", "End"]);
+        const opt = { passive: false, signal: lock.signal };
+        addEventListener("wheel", hold, opt);
+        addEventListener("touchmove", hold, opt);
+        addEventListener("keydown", (e) => { if (KEYS.has(e.key) && !e.target.closest?.("input, textarea")) hold(e); }, opt);
+        document.addEventListener("click", (e) => { if (e.target.closest?.('a[href^="#"]')) hold(e); }, opt);
+        addEventListener("scroll", () => {
+          if (heldY !== null && Math.abs(scrollY - heldY) > 0.5) scrollTo({ top: heldY, behavior: "instant" });
+        }, { passive: true, signal: lock.signal });
+        function unlock() {
+          if (!waiting()) return;
+          lock.abort();
+          root.classList.remove("wait");
+        }
+        // (six seconds of the page being shown: a tab opened in the background draws nothing
+        // until it is brought forward, and counts from then)
+        let giveUp = 0;
+        const arm = (ms) => {
+          clearTimeout(giveUp);
+          if (waiting() && !document.hidden) giveUp = setTimeout(() => { if (waiting()) story.goPlain(false); }, ms);
+        };
+        arm(Math.max(0, 6000 - performance.now()));
+        document.addEventListener("visibilitychange", () => arm(6000), { signal: lock.signal });
+        addEventListener("scroll", onScroll, { passive: true });
+        const remeasure = () => { measure(); onScroll(); };
+        // A phone's keyboard shrinks the viewport while a field has focus. That height-only
+        // resize is held (here and in the scene, which reads story.held), so the text and the
+        // model stay put; the layout catches up once the field lets go.
+        const typing = () => !!document.activeElement?.matches?.(".contact-form :is(input, textarea)");
+        let measuredW = innerWidth;
+        addEventListener("resize", () => {
+          story.held = typing() && innerWidth === measuredW;
+          if (story.held) return;
+          measuredW = innerWidth;
+          remeasure();
+        });
+        document.addEventListener("focusout", () =>
+          setTimeout(() => { if (story.held && !typing()) dispatchEvent(new Event("resize")); }, 0),
+        );
+        addEventListener("load", remeasure);
+        new ResizeObserver(remeasure).observe(document.querySelector("main"));
+
+        // ── The stars of the night sky, drawn under the night still as the scene's sky shader
+        // draws them (same integer hash, same disc), so the canvas taking over changes nothing.
+        // A cell of 58 CSS pixels, counted from the bottom left, holds a star when its first
+        // hash is above 0.955.
+        function starHash(x, y, s) {
+          let h = (Math.imul(x, 0x8da6b343) + Math.imul(y, 0xd8163841) + Math.imul(s, 0xcb1ab31f)) | 0;
+          h ^= h >>> 16; h = Math.imul(h, 0x7feb352d);
+          h ^= h >>> 15; h = Math.imul(h, 0x846ca68b);
+          h ^= h >>> 16;
+          return (h >>> 8) / 16777216;
+        }
+        function drawStars() {
+          // painted as the night still's background, one soft disc per star (a gradient from
+          // the star's centre colour to nothing at its radius, following the shader's
+          // smoothstep), so the first screen needs no canvas
+          const vw = innerWidth, vh = innerHeight;
+          const base = RAMP[0][1], STAR = [0.82, 0.86, 0.95], CELL = 58, STEPS = 6;
+          const sstep = (x) => x * x * (3 - 2 * x);
+          const layers = [];
+          for (let cy = 0; cy * CELL < vh; cy++) {
+            for (let cx = 0; cx * CELL < vw; cx++) {
+              if (starHash(cx, cy, 0) <= 0.955) continue;
+              const sx = (cx + 0.15 + 0.7 * starHash(cx, cy, 1)) * CELL, sy = (cy + 0.15 + 0.7 * starHash(cx, cy, 2)) * CELL;
+              const r = 0.55 + 0.75 * starHash(cx, cy, 3), k = 0.35 + 0.5 * starHash(cx, cy, 4);
+              const stops = [];
+              for (let i = 0; i <= STEPS; i++) {
+                const t = i / STEPS, b = (1 - sstep(t)) * k;
+                const c = base.map((v, j) => Math.round(Math.min(255, v + STAR[j] * b * 255)));
+                stops.push(`${i === STEPS ? "rgba(0,0,0,0)" : `rgb(${c})`} ${(t * r).toFixed(3)}px`);
+              }
+              // the shader counts from the bottom left; the page from the top left
+              layers.push(`radial-gradient(circle ${r.toFixed(3)}px at ${sx.toFixed(2)}px ${(vh - sy).toFixed(2)}px, ${stops.join(", ")})`);
+            }
+          }
+          document.querySelector(".poster.night").style.backgroundImage = layers.join(", ");
+        }
+
+        // ── The first paint. Nothing paints (html.hold) until the first screen is whole: the
+        // night still decoded and the stars drawn, or, when the visitor comes back to a point
+        // further down, straight away at that point, in its tone. A still that takes longer
+        // than a couple of seconds no longer holds the words back; it settles in when it comes.
+        const boot = window.orkavaBoot || { y: 0 };
+        let releaseDone;
+        story.released = new Promise((r) => (releaseDone = r));
+        function release() {
+          if (released) return;
+          released = true;
+          root.classList.add("arriving");
+          root.classList.remove("hold");
+          drawStars();
+          if (boot.y > 8) {
+            // further down: the page is laid out here, to land on the right moment
+            measure();
+            scrollTo({ top: boot.y, behavior: "instant" });
+            measure();
+            if (isStory()) {
+              const T = storyT(scrollY);
+              apply(T, true);
+              setSky(T);
+            }
+            onScroll();
+          } else {
+            // at the top the first screen needs no layout from here: the page lays itself out
+            // once, in the paint, and the observer on main measures it there
+            if (isStory()) {
+              apply(0, true);
+              setSky(0);
+            }
+          }
+          heldY = scrollY;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            root.classList.remove("arriving");
+            boot.painted?.();
+          }));
+          releaseDone();
+        }
+        const still = document.querySelector(".poster.night img");
+        if (!root.classList.contains("hold")) release();
+        else {
+          const whole = boot.y > 8 || !still ? Promise.resolve() : still.decode().catch(() => {});
+          const cap = new Promise((r) => setTimeout(r, Math.max(0, 2500 - performance.now())));
+          Promise.race([whole, cap]).then(() => {
+            if (still && !still.complete) {
+              root.classList.add("late-still");
+              still.addEventListener("load", () => root.classList.remove("late-still"), { once: true });
+            }
+            release();
+          });
+        }
+        addEventListener("resize", () => { if (!story.driven) drawStars(); });
+
+        // ── The plain page instead of the story: no usable graphics, the scene could not load,
+        // or this machine cannot draw it fast enough. The first screen is the same picture in
+        // both, so at the top the switch shows nothing; further down, the visitor keeps their
+        // place (the same chapter's words).
+        story.goPlain = (remember) => {
+          if (!isStory()) return;
+          if (remember) try { localStorage.setItem("orkava.view.1", "plain"); } catch {}
+          const k = Math.max(0, active), atTop = scrollY <= 8;
+          unlock();
+          root.classList.remove("story", "live", "fade", "gl");
+          for (const p of ["--bg", "--ink", "--body", "--muted", "--line", "--grade"]) root.style.removeProperty(p);
+          for (const b of blocks) { b.classList.remove("is-on"); b.style.removeProperty("--lift"); }
+          delete root.dataset.chapter;
+          story.driven = true;
+          dispatchEvent(new CustomEvent("orkava:plain"));
+          if (!atTop) {
+            const el = blockOf[k] || keys[k];
+            scrollTo({ top: el.getBoundingClientRect().top + scrollY - 96, behavior: "instant" });
+          }
+        };
+        boot.verdict?.then((ok) => { if (!ok) story.goPlain(false); });
+      })();
+
+      // Contact: the form posts JSON to /api/demo-requests, which the site serves same-origin
+      // and which lands in Orkava's admin as a demo request. It needs no 3D.
+      (() => {
+        const form = document.querySelector(".contact-form");
+        const box = form.closest(".contact");
+        const done = box.querySelector(".contact-done");
+        const error = form.querySelector(".contact-error");
+        const button = form.querySelector('button[type="submit"]');
+        const field = (name) => form.elements.namedItem(name);
+        const params = new URLSearchParams(location.search);
+        // A page opened from disk has no API: it confirms without sending, unless ?endpoint=
+        // names a URL to post to (for scripted checks; never honoured on the web).
+        const local = location.protocol === "file:";
+        const endpoint = local ? params.get("endpoint") : "/api/demo-requests";
+        let busy = false;
+
+        function sending(on) {
+          busy = on;
+          button.disabled = on;
+          button.textContent = on ? "Enviando…" : "Enviar";
+        }
+        function showSent(note, focus = true) {
+          done.querySelector(".done-text").textContent = "Recibido. Te escribiremos pronto.";
+          done.querySelector(".done-note").textContent = note || "";
+          box.classList.add("is-sent");
+          form.inert = true;
+          if (focus) done.focus({ preventScroll: true });
+        }
+        function fail() {
+          error.innerHTML = 'No se ha podido enviar. Inténtalo de nuevo o escríbenos a <a href="mailto:help@orkava.app">help@orkava.app</a>.';
+        }
+
+        // On a phone the block scrolls with the page: keep the focused field clear of the
+        // header above and the keyboard below.
+        function keepInView() {
+          const el = document.activeElement?.closest?.(".contact-form .field");
+          if (!el || getComputedStyle(el.closest(".block")).position === "fixed") return;
+          const r = el.getBoundingClientRect();
+          const top = document.querySelector(".site-header").getBoundingClientRect().bottom + 16;
+          const vv = window.visualViewport;
+          const bottom = (vv ? vv.offsetTop + vv.height : innerHeight) - 16;
+          if (r.top < top) scrollBy({ top: r.top - top, behavior: "instant" });
+          else if (r.bottom > bottom) scrollBy({ top: Math.min(r.bottom - bottom, r.top - top), behavior: "instant" });
+        }
+        form.addEventListener("focusin", () => requestAnimationFrame(keepInView));
+        window.visualViewport?.addEventListener("resize", keepInView);
+
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (busy || box.classList.contains("is-sent")) return;
+          const keys = ["name", "email", "phone", "pharmacyName", "message"];
+          for (const k of keys) field(k).value = field(k).value.trim();
+          if (!form.reportValidity()) return;
+          error.textContent = "";
+          // the hidden field only a bot fills in: thank it and send nothing
+          if (field("website").value) return showSent();
+          const body = {};
+          for (const k of keys) if (field(k).value) body[k] = field(k).value;
+          body.locale = "es";
+          if (!endpoint) {
+            showSent("Vista previa local: no se ha enviado nada.");
+            dispatchEvent(new CustomEvent("orkava:contact-sent"));
+            return;
+          }
+          sending(true);
+          try {
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout?.(20000),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            sending(false);
+            showSent();
+            dispatchEvent(new CustomEvent("orkava:contact-sent"));
+          } catch {
+            sending(false);
+            fail();
+          }
+        });
+
+        // ?form=sending|success|error shows that state on load, for review
+        const forced = params.get("form");
+        if (forced === "sending") sending(true);
+        else if (forced === "success") showSent("", false);
+        else if (forced === "error") fail();
+      })();
+    </script>
+
   </body>
 </html>

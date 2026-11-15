@@ -1,0 +1,14 @@
+# Only the site itself is deployed: the pages, their styles and images, the built scene.
+/*
+!/index.html
+!/scene.*.js
+!/stills
+!/aviso-legal.html
+!/privacidad.html
+!/cookies.html
+!/eliminacion-de-datos.html
+!/styles.css
+!/orky.svg
+!/robots.txt
+!/sitemap.xml
+!/vercel.json
