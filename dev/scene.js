@@ -1884,9 +1884,9 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       const faceTo = (p, q) => Math.atan2(q.x - p.x, q.z - p.z);
       const TURN = Math.atan2(Math.sin(Math.PI - PH.rest), Math.cos(Math.PI - PH.rest)); // to the shelves
       const typing = () => !!document.activeElement?.matches?.(".contact-form :is(input, textarea)");
-      // a few seconds, now and then a pair close together or a longer lull; slow while the
-      // visitor is filling in the form
-      const gap = () => (typing() ? rnd(18, 32) : Math.min(11, 1.6 - Math.log(1 - R()) * 3));
+      // random, a little slower on average than the pharmacist serves: a pair close together,
+      // a lull that empties the shop, a small rush; slow while the visitor is filling in the form
+      const gap = () => (typing() ? rnd(18, 32) : Math.min(22, 1.5 - Math.log(1 - R()) * 6));
 
       for (const c of crowd) {
         Object.assign(c, {
@@ -2155,8 +2155,9 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
               if (c.state === "off") free ??= c;
               else if (!(c.leaving && c.outer.position.z > 2.6)) inside++;
             }
-            if (inside < 3 && free) { spawn(free); nextArrival = now + gap(); }
-            else nextArrival = now + rnd(0.8, 2);
+            // a full shop turns this one away
+            if (inside < 3 && free) spawn(free);
+            nextArrival = now + gap();
           }
           soonest(nextArrival);
         } else nextArrival = Infinity;
