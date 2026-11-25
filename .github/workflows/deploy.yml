@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -11,14 +14,26 @@ concurrency:
 env:
   VERCEL_ORG_ID: team_OuoYpW573iajnuOy0vhCAStL
   VERCEL_PROJECT_ID: prj_rq7LKqkjJP8BEW3WISjusVn66SVY
-  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          path: ~/.npm
+          key: vercel-cli-65.14.0
       - run: npm install -g vercel@65.14.0
-      - run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-      - run: vercel build --prod --token="$VERCEL_TOKEN"
-      - run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
+      # The token goes only to the Vercel API calls, never to installs or builds.
+      - env:
+          TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ "$(git ls-remote origin refs/heads/main | cut -f1)" != "$GITHUB_SHA" ]; then
+            echo "::notice::main has moved past this commit; the newer run deploys it"
+            exit 0
+          fi
+          vercel pull --yes --environment=production --token="$TOKEN"
+          env -u TOKEN vercel build --prod
+          vercel deploy --prebuilt --prod --token="$TOKEN"
