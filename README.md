@@ -19,7 +19,7 @@ Plain HTML + CSS, no build step.
 
 ## Deploy
 
-The repo is deployed on Vercel (static). Push to `main` or run:
+The repo is deployed on Vercel (static). A push to `main` deploys it (`.github/workflows/deploy.yml` builds on GitHub Actions), or run:
 
 ```sh
 vercel --prod
