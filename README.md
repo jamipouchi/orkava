@@ -11,15 +11,17 @@ Plaza Catalunya 10, 17004 Girona (España) · help@orkava.app
 
 Plain files, served as they are. Vercel runs no build.
 
-- `index.html`: the landing. One night in a pharmacy, told by scrolling: a
-  closed pharmacy at night, Orky sorting the back room while the sun comes up,
-  the shop opening, and the contact form. It also holds the script for the
+- `index.html`: the landing. One night in a pharmacy, told by scrolling: the
+  shop open in daylight with customers coming and going, closing as the visitor
+  starts to scroll, Orky sorting the back room through the night while the sun
+  comes up, the shop opening again, and the contact form. It also holds the script for the
   story, the words and the form. On a machine without usable graphics, or
   without scripts, the same file is a plain page: the copy between two stills.
 - `scene.<hash>.js`: the 3D scene, built from `dev/scene.js` with three.js
   bundled in. Only machines that can draw it download it.
-- `stills/`: the first screen at night and the open shop in the morning, as
-  images. The night still is what paints first; the scene takes over from it.
+- `stills/`: the first screen (the shop open at closing time) and the open
+  shop in the morning, as images. The first still is what paints first; the
+  scene takes over from it.
 - `aviso-legal.html`, `privacidad.html`, `cookies.html`,
   `eliminacion-de-datos.html`, with `styles.css` and `orky.svg`.
 - `vercel.json`: forwards `/api/demo-requests` to the API, so the contact form

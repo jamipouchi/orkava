@@ -15,8 +15,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 (() => {
   "use strict";
   // The scene starts only in the story form, once the first screen has painted, and takes
-  // over from the night still with its own frame of that same picture; the one thing that
-  // changes is the green cross coming on.
+  // over from the first still with its own frame of that same picture.
   const root = document.documentElement;
   const story = window.rebotica;
   const boot = window.orkavaBoot;
@@ -72,7 +71,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     // the shaders are known good; asking the driver for each one's logs stalls the main thread
     renderer.debug.checkShaderErrors = false;
     renderer.toneMapping = THREE.NoToneMapping;
-    // The night: the canvas is opaque ink, the poster too (glow does not survive alpha).
+    // The canvas is opaque (glow does not survive alpha); the sky pass covers it.
     renderer.setClearColor(0x0e0f12, 1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -474,11 +473,12 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       const o = people[1 - i].home;
       p.rest = Math.atan2(o.x - p.home.x, o.z - p.home.z);
     }
-    // Pose a person u of the way along their path (0 before setting out, 1 arrived). The
+    // Pose a person u of the way along their path (0 before setting out, 1 arrived; back:
+    // walking it the other way, out, facing where they go). The
     // walk cycle runs on the distance travelled, so scrolling back and forth moves the limbs
     // the same way, and a figure that does not move stands still.
     const walkTan = new THREE.Vector3();
-    function walkPerson(p, u) {
+    function walkPerson(p, u, back = false) {
       p.outer.visible = u > 0.001;
       if (!p.outer.visible) return;
       p.path.getPointAt(u, p.outer.position);
@@ -492,7 +492,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       p.pivot.rotation.x = 0.07 * m;
       // face the way of the walk, and turn to face the other across the counter on arrival
       p.path.getTangentAt(Math.min(u, 0.999), walkTan);
-      const go = Math.atan2(walkTan.x, walkTan.z);
+      const go = Math.atan2(walkTan.x, walkTan.z) + (back ? Math.PI : 0);
       let d = p.rest - go;
       d = Math.atan2(Math.sin(d), Math.cos(d));
       p.outer.rotation.y = go + d * sst(u, 0.8, 1);
@@ -650,8 +650,6 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
         uniform vec3 rampC[5];
         uniform vec3 tint;
         float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-        // the stars' hash: integer, so the page can draw the same stars before the scene
-        // (the story script's starHash is the same function)
         float sh(uvec2 c, uint s) {
           uint k = c.x * 0x8da6b343u + c.y * 0xd8163841u + s * 0xcb1ab31fu;
           k ^= k >> 16u; k *= 0x7feb352du; k ^= k >> 15u; k *= 0x846ca68bu; k ^= k >> 16u;
@@ -1045,7 +1043,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     const CH_IN = 1, CH_MESS = 2, CH_ORKY = 3, CH_BEAT = 4, CH_DAWN = 8, CH_CLOSE = 9;
     // target, azimuth°, elevation°, radius to frame; the first and last shots are the hero
     const SHOTS = [
-      { t: v3(-0.25, 0.55, 0.1), az: -36, el: 30, r: 5.6 }, // 0 the closed pharmacy (framed by the hero box)
+      { t: v3(-0.25, 0.55, 0.1), az: -36, el: 30, r: 5.6 }, // 0 the open pharmacy at closing time (framed by the hero box)
       { t: v3(-0.3, 0.9, 0.05), az: -34, el: 29, r: 4.6 }, // 1 moved in: the whole pharmacy, centred
       { t: v3(2.0, 0.8, -0.1), az: -30, el: 33, r: 2.7 }, // 2 mess: low, into the back room
       { t: v3(2.05, 0.95, -0.35), az: -27, el: 40, r: 2.8 }, // 3 Orky arrives
@@ -1117,9 +1115,9 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     const stageEl = document.querySelector(".stage");
     const stage = { l: 0, t: 0, w: 1, h: 1 };
     const hero = { zoom: 1, zoomY: 1, lx: 0, ly: 0, ls: 1 };
-    // The night still carries the framing it was made with, per layout: data-r-d / data-s-d
+    // The first still carries the framing it was made with, per layout: data-r-d / data-s-d
     // (desktop) and data-r-p / data-s-p (phone), and --a-d / --wmax-d, --a-p / --wmax-p.
-    const posterImg = () => document.querySelector(".poster.night .poster-img");
+    const posterImg = () => document.querySelector(".poster.open .poster-img");
     const L = () => (narrow ? "P" : "D");
     // until there are stills, the hero box takes the picture's own proportions
     for (const img of document.querySelectorAll(".poster-img")) if (!img.dataset.rD) img.style.setProperty("--a", ((R.u1 - R.u0) / (R.v1 - R.v0)).toFixed(5));
@@ -1229,6 +1227,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     const ONE = v3(1, 1, 1), ZERO = v3(0, 0, 0), dotScale = v3(1, 1, 1), Z_AXIS = v3(0, 0, 1);
     const lookObj = new THREE.Object3D();
     let Tcur = 0, last = 0, clock = 0, first = true, revealed = false;
+    // open: 1 while the shop is open at the top of the page, 0 once it has closed for the night
+    let open = 1;
     let blinkAt = 2.5, blinkT = -1;
     // recede: 0 = lit, 1 = sunk into the dark (per loose group: bubbles, parcels, posts, ERP)
     const rec = [0, 0, 0, 0];
@@ -1556,18 +1556,23 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     // crosses toward the right edge through the night) or the sun's (it rises at the left
     // edge and climbs toward the middle), and a little from the visitor's, so the card
     // faces read white, as in the logo.
-    function lightSide(T) {
-      const x = useSun
+    function lightSide(T, dusk) {
+      const x = dusk !== undefined && useSun ? dusk : useSun
         ? lerp(-0.05, 0.6, easeOut(clamp01((T - CH_BEAT - 0.7) / (CH_CLOSE - CH_BEAT - 0.7))))
         : lerp(0.66, 1.05, Math.pow(clamp01(T / (CH_BEAT + 0.55)), 1.3));
       return [Math.min(0.5, (x - 0.5) * 2), -0.45];
     }
+    // Closing time: the sun, at the close's height while the shop is open, sets toward the
+    // right edge as it closes, and the moon comes up once it is down.
+    const DUSK_EL = [[0, -8], [0.22, -1], [0.45, 5], [1, 46]];
     function sky(T) {
       const mEl = knot(MOON_EL, T);
       sunEl = knot(SUN_EL, T);
-      const mK = sst(mEl, -1, 8), sK = sst(sunEl, -1, 4);
+      let dusk;
+      if (open > 0) { sunEl = knot(DUSK_EL, open); dusk = lerp(1.05, 0.6, open); }
+      const mK = sst(mEl, -1, 8) * (1 - sst(open, 0.04, 0.22)), sK = sst(sunEl, -1, 4);
       useSun = sunEl > -1;
-      const [hx, hz] = lightSide(T);
+      const [hx, hz] = lightSide(T, dusk);
       const el = (useSun ? sunEl : mEl) * D2R;
       tmpV.copy(REF_R).multiplyScalar(hx).addScaledVector(REF_F, hz).normalize().multiplyScalar(Math.cos(el)).addScaledVector(UP, Math.sin(el));
       // the light stays a touch above the horizon, so the shadow map never grazes
@@ -1592,19 +1597,6 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       return morning;
     }
 
-    // The cross coming on, by seconds since it was switched (crossAt is set at the takeover):
-    // a stutter, as an LED cross does when it powers up, then steady. Reduced motion: on.
-    const FLICKER = [[0, 1], [0.05, 0], [0.13, 0.6], [0.18, 0], [0.34, 1]];
-    let crossAt = Infinity;
-    function crossLevel(t) {
-      if (!(t >= 0)) return 0;
-      if (REDUCED) return 1;
-      let v = 0;
-      for (const [a, x] of FLICKER) if (t >= a) v = x;
-      return v;
-    }
-    const crossSettled = () => REDUCED ? crossAt < Infinity : clock - crossAt > FLICKER[FLICKER.length - 1][0];
-
     function updateLights(T, time, groupT) {
       const day = dayNow, nd = 1 - day;
       const morning = sky(T);
@@ -1624,13 +1616,11 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       roomLight.position.set(2.0, 2.2, -0.3);
       roomPool.material.uniforms.color.value.copy(roomCol);
       roomPool.material.uniforms.amt.value = ri * 0.03 * nd;
-      // the green cross glows through the night and simply reads green by day; it is off
-      // until the scene takes over (the night still shows it off), then comes on
-      const on = POSTER ? +(T > 4.5) : crossLevel(time - crossAt);
-      crossCaps.color.copy(GREEN).multiplyScalar(lerp(0.32, lerp(2.2, 1, day), on));
-      crossLight.intensity = 2.2 * nd * on;
-      crossHalo.material.opacity = 0.42 * nd * on;
-      crossPool.material.uniforms.amt.value = 0.3 * nd * on;
+      // the green cross glows through the night and simply reads green by day
+      crossCaps.color.copy(GREEN).multiplyScalar(lerp(2.2, 1, day));
+      crossLight.intensity = 2.2 * nd;
+      crossHalo.material.opacity = 0.42 * nd;
+      crossPool.material.uniforms.amt.value = 0.3 * nd;
       // the old computer's screen: a little light in the back room all night
       crtScreen.material.color.setScalar(lerp(0.98, 0.74, day));
       crtLight.intensity = 1.3 * nd * nd;
@@ -1669,8 +1659,9 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       lineFine.opacity = lerp(0.5, 0.75, day);
       hullMat.uniforms.color.value.copy(lc);
       lineOrky.color.copy(LINE_ORKY_NIGHT).lerp(INK, day);
-      // the shop is closed all night; with the sun up the pharmacist comes out of the back
-      // room to the counter, and the first customer walks in from the street (then the day)
+      // at closing time the customer walks out and the pharmacist goes to the back room; the
+      // shop is closed all night; with the sun up the pharmacist comes out of the back room to
+      // the counter, and the first customer walks in from the street (then the day)
       shop.pose(T);
     }
 
@@ -1852,7 +1843,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     play.busy = () => turning() || pushed;
 
     // ───────────────────────── the day
-    // Once the ending has played the shop is open, for as long as the last screen shows.
+    // The shop is open on the first screen until the visitor scrolls, and again once the
+    // ending has played, for as long as the last screen shows.
     // Customers come in from the street after random gaps, some stop at the display table,
     // queue at the counter (three at most in the shop, three places in the queue), are
     // served and leave with a white bag. The pharmacist faces the counter, turns to the
@@ -2144,7 +2136,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       function update(dt) {
         const now = performance.now() / 1000;
         moving = false; soon = Infinity;
-        const want = !REDUCED && revealed && Tgoal >= CH_CLOSE && Tcur >= CH_CLOSE && level < LEVELS.length - 1;
+        const want = !REDUCED && revealed && ((Tgoal >= CH_CLOSE && Tcur >= CH_CLOSE) || (Tgoal <= 0 && Tcur <= 0.001)) && level < LEVELS.length - 1;
         if (want !== on) { on = want; if (on) start(now); else stop(); }
         winding = now - lastInput > IDLE;
         if (on && !winding) {
@@ -2178,7 +2170,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       }
       function pose(T) {
         const P0 = PH;
-        walkPerson(P0, sst(T, CH_DAWN + 0.05, CH_DAWN + 0.4));
+        const closing = T < CH_DAWN;
+        walkPerson(P0, Math.max(sst(T, CH_DAWN + 0.05, CH_DAWN + 0.4), sst(open, 0.3, 0.75)), closing);
         if (P0.outer.visible && ph.turn + ph.step + ph.reach > 0) {
           P0.outer.rotation.y += ph.turn * TURN;
           P0.outer.position.z -= ph.step * 0.3;
@@ -2190,7 +2183,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
         for (const c of crowd) {
           if (c.state === "off") { c.outer.visible = false; continue; }
           if (c.state === "script") {
-            walkPerson(c, sst(T, CH_DAWN + 0.2, CH_DAWN + 0.7));
+            walkPerson(c, Math.max(sst(T, CH_DAWN + 0.2, CH_DAWN + 0.7), sst(open, 0.65, 1)), closing);
             c.pivot.scale.setScalar(PS);
             c.bags[0].visible = c.bags[1].visible = false;
             showAlpha(c, c.alpha);
@@ -2244,6 +2237,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       const groupT = groupTimes(T);
       // daylight: the glow drains out of the room and the ink comes into the lines as the sky
       // lifts, from Orky's arrival to the shop opening, with no moment where it switches
+      open = story.openAt(T);
       dayNow = sst(story.skyState(T).day, 0.2, 0.92);
       updateOrky(T, time, groupT, dt);
       updateItems(T, time, dt, groupT);
@@ -2346,8 +2340,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     // ───────────────────────── drawing only when the picture changes
     // The loop runs while anything moves: the scroll's story time catching up, the ending,
     // the loose things floating (from the mess on), Orky, a drag or a push settling, the
-    // pointer's parallax, the cross coming on, a step of the glow, someone in the shop. On
-    // the first screens (before the mess drops in) and on the last, once all of that is at
+    // pointer's parallax, a step of the glow, someone in the shop. On the first screens
+    // (before the mess drops in) and on the last, once all of that is at
     // rest, the picture is still and the loop stops; scroll, pointer, touch and resize wake
     // it, and so does the day's next moment.
     let looping = false, stillN = 0;
@@ -2356,7 +2350,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       if (Tcur !== Tgoal || !(Tcur < ITEMS_FROM || Tcur >= CH_CLOSE)) return false;
       if (Math.abs(ptrTX - ptrX) > 1e-3 || Math.abs(ptrTY - ptrY) > 1e-3) return false;
       if (time < 5 && Math.abs(ptrX) + Math.abs(ptrY) > 1e-3) return false; // the parallax easing in
-      if (!crossSettled() || nextLevel >= 0 || bloomK !== (bloomWanted() ? 1 : 0)) return false;
+      if (nextLevel >= 0 || bloomK !== (bloomWanted() ? 1 : 0)) return false;
       if (orky.group.visible && (blinkT >= 0 || Math.abs(1 - orkyRest) > 1e-3)) return false;
       if (rec.some((r, g) => Math.abs(r - (story.active >= CH_BEAT && story.active < CH_BEAT + 4 && g !== story.active - CH_BEAT ? 1 : 0)) > 1e-3)) return false;
       return !play.busy?.();
@@ -2419,13 +2413,12 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       }
       warmN += 1;
       if (warmN < 2 || !isStory()) return;
-      // The takeover. On the first screen the canvas is the still (with the cross off), so
-      // it simply replaces it (the still goes a moment later, under it), and the cross comes
-      // on as it shows. Anywhere else the page is already in that moment's tone and the
-      // scene fades in over it, already settled. Either way the page may scroll from here.
+      // The takeover. On the first screen the canvas is the still, so it simply replaces it
+      // (the still goes a moment later, under it). Anywhere else the page is already in that
+      // moment's tone and the scene fades in over it, already settled. Either way the page
+      // may scroll from here.
       revealed = true;
       looping = true;
-      crossAt = clock + 0.12;
       story.driven = true;
       root.classList.add("live");
       if (scrollY >= 2 || Tt >= 0.001) root.classList.add("fade");
@@ -2433,8 +2426,8 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
     }
 
     // ───────────────────────── still capture (?poster=desktop|phone&dpr=&t=)
-    // The hero frame at story time t (0 the night, 9 the morning), drawn into the hero box
-    // at dpr device pixels per CSS pixel, without stars, with the sky made transparent.
+    // The hero frame at story time t (0 the shop open at closing time, 9 the morning), drawn
+    // into the hero box at dpr device pixels per CSS pixel, with the sky made transparent.
     function capturePoster() {
       const layout = narrow ? "phone" : "desktop";
       if (POSTER !== layout) {
@@ -2473,7 +2466,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
       const g = c2.getContext("2d", { willReadFrequently: true });
       g.drawImage(renderer.domElement, 0, 0);
       const px = g.getImageData(0, 0, W, H), d = px.data;
-      const sky = story.RAMP[T < 4.5 ? 0 : story.RAMP.length - 1][1];
+      const sky = story.RAMP[dayNow < 0.5 ? 0 : story.RAMP.length - 1][1];
       for (let i = 0; i < d.length; i += 4) {
         if (Math.abs(d[i] - sky[0]) <= 2 && Math.abs(d[i + 1] - sky[1]) <= 2 && Math.abs(d[i + 2] - sky[2]) <= 2) d[i + 3] = 0;
       }

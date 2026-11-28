@@ -3,9 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-visual" />
-    <!-- The page opens at night. Until the first screen is whole nothing is drawn, and this
-         makes the browser's own blank page dark instead of white. -->
-    <meta name="color-scheme" content="dark" />
+    <!-- The page opens in daylight, as does the browser's own blank page before it. -->
+    <meta name="color-scheme" content="light" />
     <title>Orkava · Tú, en el mostrador. Orkava, en la rebotica.</title>
     <meta name="description" content="Orkava. Inteligencia artificial para farmacias. ORKAVA TECHNOLOGIES SL · Girona, España." />
     <meta property="og:title" content="Orkava · Tú, en el mostrador. Orkava, en la rebotica." />
@@ -38,7 +37,7 @@
         // The scene's code (three.js bundled in, built by build.mjs). It is fetched as soon as
         // the machine is known to draw it, which on a return visit is now, in parallel with
         // the still; it runs once the first screen has painted.
-        const SCENE = "scene.0ca3407917.js";
+        const SCENE = "scene.a2f478a080.js";
         let fetching = false;
         const fetchScene = () => {
           if (fetching) return;
@@ -122,7 +121,7 @@
         });
         if (y > 8) root.classList.add("restored");
         // Nothing paints until the first screen is whole (the page script lifts the hold once
-        // the night still is decoded, or at a scrolled position at once); this is the backstop.
+        // the first still is decoded, or at a scrolled position at once); this is the backstop.
         if (!capture) {
           root.classList.add("hold");
           setTimeout(() => root.classList.remove("hold"), 5000);
@@ -130,19 +129,19 @@
         window.orkavaBoot = { story, verdict, y, capture, painted: () => onPainted() };
       })();
     </script>
-    <link rel="preload" as="image" href="stills/night-desktop-1x.webp" media="(min-width: 761px) and (max-resolution: 1.49dppx)" fetchpriority="high" />
-    <link rel="preload" as="image" href="stills/night-desktop-2x.webp" media="(min-width: 761px) and (min-resolution: 1.5dppx)" fetchpriority="high" />
-    <link rel="preload" as="image" href="stills/night-phone.webp" media="(max-width: 760px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="stills/open-desktop-1x.webp" media="(min-width: 761px) and (max-resolution: 1.49dppx)" fetchpriority="high" />
+    <link rel="preload" as="image" href="stills/open-desktop-2x.webp" media="(min-width: 761px) and (min-resolution: 1.5dppx)" fetchpriority="high" />
+    <link rel="preload" as="image" href="stills/open-phone.webp" media="(max-width: 760px)" fetchpriority="high" />
     <style>
-      /* The page is one night turning into one morning across the whole scroll. The story
-         script moves these tokens with the sky; these are the night values. --bg is the sky at
-         the top of the screen. */
+      /* The page is one closing time, one night and one morning across the whole scroll. The
+         story script moves these tokens with the sky; these are the daylight values. --bg is
+         the sky at the top of the screen. */
       :root {
-        --bg: #0e0f12;
-        --ink: #f8f8f5;
-        --body: #c4c7cd;
-        --muted: #8b919c;
-        --line: rgba(248, 248, 245, 0.08);
+        --bg: #f8f8f5;
+        --ink: #111827;
+        --body: #3d4451;
+        --muted: #667085;
+        --line: rgba(17, 24, 39, 0.08);
         --field: #ffffff;
         --field-ink: #111827;
         --field-line: rgba(17, 24, 39, 0.16);
@@ -178,10 +177,9 @@
       html.hold *, html.arriving * { transition: none !important; }
 
       /* ── Scene layers: the sky, the stills, the canvas, the stage box, the grade, the scrim.
-         The night still sits in a box the size of the first screen; the scene projects its
+         The first still sits in a box the size of the first screen; the scene projects its
          first screen (and the close) into the same box, so the live canvas lands exactly on
-         it. The still's sky is transparent: under it, the stars are drawn by the page from the
-         same hash the scene's sky uses, so the two are one picture. */
+         it. The still's sky is transparent, so the page's own sky shows through it. */
       .poster {
         position: absolute; left: 0; top: 0; width: 100%; height: 100vh;
         z-index: 0; pointer-events: none; overflow: hidden;
@@ -206,7 +204,7 @@
       }
       /* a still that arrives after the page was shown (a very slow connection) settles in */
       .poster picture { transition: opacity 0.4s ease; }
-      .late-still .poster.night picture { opacity: 0; }
+      .late-still .poster.open picture { opacity: 0; }
 
       #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: none; z-index: 0; opacity: 0; }
       /* The sky before the scene: the same field the scene's sky paints, as a gradient, so a
@@ -282,21 +280,24 @@
       }
       .button:hover { opacity: 0.88; }
 
-      /* ── The plain page: the night first screen, the copy as an ordinary page through the
-         sunrise, and the form beside the open pharmacy in the morning. */
+      /* ── The plain page: the open pharmacy on the first screen, the copy as an ordinary page
+         through the night and the sunrise, and the form beside the open pharmacy in the
+         morning. */
       /* (the header's hairline sits over the hero, so the words land where the story's do) */
       .hero { min-height: calc(100vh - var(--head)); margin-top: -1px; }
       /* placed as the story places it (centred on the screen below the header, by the same
          arithmetic), so the two first screens are the same picture to the pixel */
       .hero .block { position: absolute; left: var(--gutter); width: var(--col); top: calc(50vh - var(--head) / 2); transform: translateY(-50%); }
       .movein, .dawn, .beat-key { display: none; }
-      .mess { padding: clamp(96px, 17vh, 168px) var(--gutter); }
-      .mess .block, .intro .block { max-width: 600px; }
-      .day-side {
-        --bg: #f8f8f5; --ink: #111827; --body: #3d4451; --muted: #667085; --line: rgba(17, 24, 39, 0.08);
-        background: var(--bg); color: var(--ink);
+      /* the sky falls from paper to ink above the mess, and lifts again above the product, in
+         the scene's own tones */
+      .mess {
+        --bg: #0e0f12; --ink: #f8f8f5; --body: #c4c7cd; --muted: #8b919c; --line: rgba(248, 248, 245, 0.08);
+        padding: calc(300px + clamp(56px, 10vh, 96px)) var(--gutter) clamp(96px, 17vh, 168px);
+        background: linear-gradient(180deg, #f8f8f5 0, #d1d0cb 60px, #7c7e83 130px, #2e323a 210px, #0e0f12 300px);
+        color: var(--ink);
       }
-      /* the sky lifts from ink to paper above the product, in the scene's own tones */
+      .mess .block, .intro .block { max-width: 600px; }
       #producto {
         padding-top: 300px;
         background: linear-gradient(180deg, #0e0f12 0, #2e323a 90px, #7c7e83 170px, #d1d0cb 240px, #f8f8f5 300px);
@@ -410,7 +411,7 @@
       .story .grade { position: fixed; inset: 0; width: auto; height: auto; }
       .story #ov { display: block; position: fixed; inset: 0; z-index: 3; pointer-events: none; color: var(--ink); opacity: 0; }
       .story.live #ov { opacity: 1; transition: opacity 0.5s ease; }
-      .story .day-side { background: none; color: inherit; --bg: inherit; --ink: inherit; --body: inherit; --muted: inherit; --line: inherit; }
+      .story .mess { background: none; color: inherit; --bg: inherit; --ink: inherit; --body: inherit; --muted: inherit; --line: inherit; }
       .story #producto { padding-top: 0; background: none; }
       .story .intro, .story .mess, .story .beats-sec { padding-top: 0; padding-bottom: 0; }
       .story .movein, .story .dawn, .story .beat-key { display: block; }
@@ -492,7 +493,7 @@
         /* the plain page: the model in the top of the screen, the words under it */
         .hero { display: block; min-height: calc(100vh - var(--head)); padding-top: calc(var(--panel) * 1vh + 6px - var(--head)); }
         .hero .block { position: static; width: auto; transform: none; }
-        .mess { padding: 88px var(--gutter); }
+        .mess { padding: calc(220px + 56px) var(--gutter) 88px; background: linear-gradient(180deg, #f8f8f5 0, #d1d0cb 40px, #7c7e83 90px, #2e323a 150px, #0e0f12 220px); }
         #producto { padding-top: 220px; background: linear-gradient(180deg, #0e0f12 0, #2e323a 70px, #7c7e83 130px, #d1d0cb 180px, #f8f8f5 220px); }
         .beats.block { grid-template-columns: 1fr; gap: 32px; }
         .beats-sec { padding-bottom: 8px; }
@@ -501,7 +502,7 @@
 
         .story .hero { padding-top: 0; }
         .story .block, .story .beats.block, .story .close .block {
-          left: var(--gutter); right: var(--gutter); width: auto;
+          position: fixed; left: var(--gutter); right: var(--gutter); width: auto;
           top: calc(var(--panel) * 1% + 6px); transform: translateY(10px);
         }
         .story .block.is-on { transform: none; }
@@ -545,10 +546,10 @@
     </svg>
 
     <div class="sky" aria-hidden="true"></div>
-    <div class="poster night" aria-hidden="true">
-      <!-- still:night -->
-      <picture><source media="(max-width: 760px)" srcset="stills/night-phone.webp" /><source media="(min-resolution: 1.5dppx)" srcset="stills/night-desktop-2x.webp" /><img class="poster-img" src="stills/night-desktop-1x.webp" alt="" data-r-d="-0.215353,-0.159284,0.219995,0.135005" data-s-d="1807.7501" data-r-p="-0.215353,-0.159634,0.219995,0.135355" data-s-p="840.7071" style="--a-d: 1.47932; --wmax-d: 787px; --a-p: 1.47581; --wmax-p: 366px" fetchpriority="high" /></picture>
-      <!-- /still:night -->
+    <div class="poster open" aria-hidden="true">
+      <!-- still:open -->
+      <picture><source media="(max-width: 760px)" srcset="stills/open-phone.webp" /><source media="(min-resolution: 1.5dppx)" srcset="stills/open-desktop-2x.webp" /><img class="poster-img" src="stills/open-desktop-1x.webp" alt="" data-r-d="-0.215353,-0.159284,0.219995,0.135005" data-s-d="1807.7501" data-r-p="-0.215353,-0.159634,0.219995,0.135355" data-s-p="840.7071" style="--a-d: 1.47932; --wmax-d: 787px; --a-p: 1.47581; --wmax-p: 366px" fetchpriority="high" /></picture>
+      <!-- /still:open -->
     </div>
     <canvas id="scene" aria-hidden="true"></canvas>
     <div class="stage" aria-hidden="true"></div>
@@ -589,7 +590,7 @@
         </div>
       </section>
 
-      <section id="producto" class="day-side">
+      <section id="producto">
         <div class="sec intro" id="orkava" data-key data-orky>
           <div class="block spoken">
             <p class="eyebrow">Qué es Orkava</p>
@@ -613,7 +614,7 @@
 
       <div class="sec dawn" data-key></div>
 
-      <section class="sec close day-side" id="contacto" data-key>
+      <section class="sec close" id="contacto" data-key>
         <div class="poster day" aria-hidden="true">
           <!-- still:day -->
           <picture><source media="(max-width: 760px)" srcset="stills/day-phone.webp" /><source media="(min-resolution: 1.5dppx)" srcset="stills/day-desktop-2x.webp" /><img class="poster-img" src="stills/day-desktop-1x.webp" alt="" data-r-d="-0.215353,-0.159284,0.219995,0.135005" data-s-d="1807.7501" data-r-p="-0.215353,-0.159634,0.219995,0.135355" data-s-p="840.7071" style="--a-d: 1.47932; --wmax-d: 787px; --a-p: 1.47581; --wmax-p: 366px" loading="lazy" /></picture>
@@ -683,8 +684,8 @@
       // The story: which chapter is active, the words, and the colour of the page. It needs no
       // 3D, so the words and the sky work even when three.js never arrives.
       //
-      // Chapters (story time T reaches chapter k at T = k): 0 the closed pharmacy, 1 the
-      // move-in, 2 the mess, 3 Orky, 4-7 the four beats, 8 the shop opens, 9 the close.
+      // Chapters (story time T reaches chapter k at T = k): 0 the open pharmacy at closing
+      // time, 1 the move-in, 2 the mess, 3 Orky, 4-7 the four beats, 8 the shop opens, 9 the close.
       (() => {
         const root = document.documentElement;
         const keys = [...document.querySelectorAll("[data-key]")];
@@ -756,19 +757,20 @@
         }
 
         // ── The sky, which is the page. Scrolling is time passing: story time T runs from the
-        // closed pharmacy at night (0) to the open one in the morning (9), and every value here
-        // only grows with it. Light arrives from one side, below the horizon where the sun will
-        // rise: the sky's lift at a point is A - G * (its distance from there, in screen
-        // heights), so a band of dawn climbs across the page, and A ends high and G at zero, all
-        // paper. The scene's sky shader computes the same field from the same numbers.
+        // open pharmacy at closing time (0) through the night to the open one in the morning
+        // (9). Light comes from one side, below the horizon where the sun sets or will rise:
+        // the sky's lift at a point is A - G * (its distance from there, in screen heights), so
+        // a band of dusk sinks across the page as the visitor starts to scroll, and a band of
+        // dawn climbs across it later, until A is high and G at zero, all paper. The scene's
+        // sky shader computes the same field from the same numbers.
         const sst = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
         const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
         const css = (c) => "#" + c.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
-        // per chapter: [daylight, A, G, warmth]. Daylight drives the scene's light: night through
-        // the mess, the sky lifting as Orky arrives, sunrise at the second beat, morning at the
-        // close.
+        // the night, per chapter: [daylight, A, G, warmth]. Daylight drives the scene's light:
+        // night through the mess, the sky lifting as Orky arrives, sunrise at the second beat,
+        // morning at the close.
         const SKY_KNOTS = [
-          [0.0, -0.3, 0.5, 0], // the closed pharmacy: deep night
+          [0.0, -0.3, 0.5, 0], // the first screen, once the shop has closed: deep night
           [0.02, -0.22, 0.5, 0], // move-in
           [0.06, -0.06, 0.5, 0], // the mess: night
           [0.16, 0.2, 0.5, 0.05], // Orky: late night, the sky beginning to lift
@@ -779,12 +781,22 @@
           [0.9, 1.08, 0.05, 0.08], // the shop opens
           [1, 1.12, 0, 0], // the close: bright morning
         ];
+        // Closing time: the shop is open (1) in the close's light at the top of the page, and
+        // closes (0) as the camera moves in, the sun setting at the right with a trace of
+        // warmth on the way down.
+        const openAt = (T) => 1 - sst(T, 0.5, 1.5);
+        const OPEN_V = SKY_KNOTS[SKY_KNOTS.length - 1];
         const skyState = (T) => {
           const t = Math.min(SKY_KNOTS.length - 1, Math.max(0, T));
           const i = Math.min(SKY_KNOTS.length - 2, Math.floor(t)), u = t - i;
           const [a, b] = [SKY_KNOTS[i], SKY_KNOTS[i + 1]];
-          const v = a.map((x, k) => x + (b[k] - x) * u);
-          return { day: v[0], A: v[1], G: v[2], warm: v[3] };
+          let v = a.map((x, k) => x + (b[k] - x) * u);
+          const P = openAt(T);
+          if (P > 0) {
+            v = v.map((x, k) => x + (OPEN_V[k] - x) * P);
+            v[3] += 3.2 * P * (1 - P);
+          }
+          return { day: v[0], A: v[1], G: v[2], warm: v[3], sunX: P > 0 ? 0.96 : 0.04 };
         };
         // the sky's tones, from ink to paper, near monochrome; warmth adds a trace of colour in
         // the first sunlight without changing the tone's brightness
@@ -869,7 +881,7 @@
         const pixelRatio = () => (narrowMQ.matches ? 1.5 : devicePixelRatio >= 1.5 ? 2 : 1);
         // frames: how many frames the scene has drawn (it draws only when the picture changes)
         const story = (window.rebotica = {
-          storyT, apply, setSky, skyState, SKY, RAMP, TINT, pixelRatio, unlock,
+          storyT, apply, setSky, skyState, openAt, SKY, RAMP, TINT, pixelRatio, unlock,
           driven: false, held: false, wordsOn: true, frames: 0,
           get active() { return active; },
         });
@@ -879,12 +891,12 @@
           if (isStory() && !waiting() && k >= 0 && blockOf[k] !== blockOf[active]) scrollTo({ top: arrive[k] + 2 });
         });
 
-        // ── Waiting for the scene. Until the live scene has taken over from the still (the
-        // cross comes on), the story does not scroll by any means: html.wait clips the page,
+        // ── Waiting for the scene. Until the live scene has taken over from the still, the
+        // story does not scroll by any means: html.wait clips the page,
         // and wheel, touch, keys, in-page links and focus moves are held at the position the
         // page arrived at (the top, or where a reload restored it). The scene calls unlock;
-        // the plain page, which never waits, unlocks too, and so does giving up on a scene
-        // that is not live within six seconds.
+        // so does the switch to the plain page, and giving up on a scene that is not live
+        // within six seconds. A page that is plain from the start never holds.
         const lock = new AbortController();
         const waiting = () => root.classList.contains("wait");
         let heldY = null;
@@ -899,10 +911,10 @@
           if (heldY !== null && Math.abs(scrollY - heldY) > 0.5) scrollTo({ top: heldY, behavior: "instant" });
         }, { passive: true, signal: lock.signal });
         function unlock() {
-          if (!waiting()) return;
           lock.abort();
           root.classList.remove("wait");
         }
+        if (!isStory()) unlock();
         // (six seconds of the page being shown: a tab opened in the background draws nothing
         // until it is brought forward, and counts from then)
         let giveUp = 0;
@@ -931,45 +943,8 @@
         addEventListener("load", remeasure);
         new ResizeObserver(remeasure).observe(document.querySelector("main"));
 
-        // ── The stars of the night sky, drawn under the night still as the scene's sky shader
-        // draws them (same integer hash, same disc), so the canvas taking over changes nothing.
-        // A cell of 58 CSS pixels, counted from the bottom left, holds a star when its first
-        // hash is above 0.955.
-        function starHash(x, y, s) {
-          let h = (Math.imul(x, 0x8da6b343) + Math.imul(y, 0xd8163841) + Math.imul(s, 0xcb1ab31f)) | 0;
-          h ^= h >>> 16; h = Math.imul(h, 0x7feb352d);
-          h ^= h >>> 15; h = Math.imul(h, 0x846ca68b);
-          h ^= h >>> 16;
-          return (h >>> 8) / 16777216;
-        }
-        function drawStars() {
-          // painted as the night still's background, one soft disc per star (a gradient from
-          // the star's centre colour to nothing at its radius, following the shader's
-          // smoothstep), so the first screen needs no canvas
-          const vw = innerWidth, vh = innerHeight;
-          const base = RAMP[0][1], STAR = [0.82, 0.86, 0.95], CELL = 58, STEPS = 6;
-          const sstep = (x) => x * x * (3 - 2 * x);
-          const layers = [];
-          for (let cy = 0; cy * CELL < vh; cy++) {
-            for (let cx = 0; cx * CELL < vw; cx++) {
-              if (starHash(cx, cy, 0) <= 0.955) continue;
-              const sx = (cx + 0.15 + 0.7 * starHash(cx, cy, 1)) * CELL, sy = (cy + 0.15 + 0.7 * starHash(cx, cy, 2)) * CELL;
-              const r = 0.55 + 0.75 * starHash(cx, cy, 3), k = 0.35 + 0.5 * starHash(cx, cy, 4);
-              const stops = [];
-              for (let i = 0; i <= STEPS; i++) {
-                const t = i / STEPS, b = (1 - sstep(t)) * k;
-                const c = base.map((v, j) => Math.round(Math.min(255, v + STAR[j] * b * 255)));
-                stops.push(`${i === STEPS ? "rgba(0,0,0,0)" : `rgb(${c})`} ${(t * r).toFixed(3)}px`);
-              }
-              // the shader counts from the bottom left; the page from the top left
-              layers.push(`radial-gradient(circle ${r.toFixed(3)}px at ${sx.toFixed(2)}px ${(vh - sy).toFixed(2)}px, ${stops.join(", ")})`);
-            }
-          }
-          document.querySelector(".poster.night").style.backgroundImage = layers.join(", ");
-        }
-
         // ── The first paint. Nothing paints (html.hold) until the first screen is whole: the
-        // night still decoded and the stars drawn, or, when the visitor comes back to a point
+        // first still decoded, or, when the visitor comes back to a point
         // further down, straight away at that point, in its tone. A still that takes longer
         // than a couple of seconds no longer holds the words back; it settles in when it comes.
         const boot = window.orkavaBoot || { y: 0 };
@@ -980,7 +955,6 @@
           released = true;
           root.classList.add("arriving");
           root.classList.remove("hold");
-          drawStars();
           if (boot.y > 8) {
             // further down: the page is laid out here, to land on the right moment
             measure();
@@ -1007,7 +981,7 @@
           }));
           releaseDone();
         }
-        const still = document.querySelector(".poster.night img");
+        const still = document.querySelector(".poster.open img");
         if (!root.classList.contains("hold")) release();
         else {
           const whole = boot.y > 8 || !still ? Promise.resolve() : still.decode().catch(() => {});
@@ -1020,7 +994,6 @@
             release();
           });
         }
-        addEventListener("resize", () => { if (!story.driven) drawStars(); });
 
         // ── The plain page instead of the story: no usable graphics, the scene could not load,
         // or this machine cannot draw it fast enough. The first screen is the same picture in

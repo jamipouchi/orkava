@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 // Regenerates the landing's stills: the pictures that stand in for the 3D scene on the first
-// screen (the night) and, on the plain page, beside the contact form (the morning).
+// screen (the shop open at closing time) and, on the plain page, beside the contact form (the
+// morning).
 //
 //   node dev/make-poster.mjs <page.html> [--quality 0.8]
 //
 // For each layout and density (desktop at 1x and 2x on a 1440x900 window, phone at 1.5x on a
-// 390x844 touch screen) and each moment (t=0 the night, t=9 the morning), it opens the page
+// 390x844 touch screen) and each moment (t=0 closing time, t=9 the morning), it opens the page
 // with ?poster=<layout>&dpr=<d>&t=<t>, waits for the page to draw that frame into its hero box
-// (window.__poster: sky transparent, no stars, the night's green cross off as the live scene
-// starts it), and writes it to stills/<night|day>-<layout>[-<d>x].webp next to the page.
+// (window.__poster: sky transparent), and writes it to stills/<open|day>-<layout>[-<d>x].webp
+// next to the page.
 // Then it rewrites the <picture> between
-//   <!-- still:night --> and <!-- /still:night -->, and <!-- still:day --> … <!-- /still:day -->
+//   <!-- still:open --> and <!-- /still:open -->, and <!-- still:day --> … <!-- /still:day -->
 // with the framing the stills were made with (data-r-d, data-s-d, --a-d, --wmax-d for desktop;
 // -p for the phone). The page is served from disk as https://landing.test/ and draws with its
 // built scene bundle (run build.mjs first after changing scene.js); nothing goes to the network.
@@ -44,10 +45,10 @@ for (const t of [0, 9]) {
   SHOTS.push({ layout: "desktop", dpr: 2, t, viewport: { width: 1440, height: 900 }, mobile: false });
   SHOTS.push({ layout: "phone", dpr: 1.5, t, viewport: { width: 390, height: 844 }, mobile: true });
 }
-const name = (s) => `${s.t === 0 ? "night" : "day"}-${s.layout}${s.layout === "desktop" ? `-${s.dpr}x` : ""}.webp`;
+const name = (s) => `${s.t === 0 ? "open" : "day"}-${s.layout}${s.layout === "desktop" ? `-${s.dpr}x` : ""}.webp`;
 
 let html = readFileSync(file, "utf8");
-for (const k of ["night", "day"]) {
+for (const k of ["open", "day"]) {
   if (!html.includes(`<!-- still:${k} -->`) || !html.includes(`<!-- /still:${k} -->`)) {
     console.error(`${pagePath}: missing the <!-- still:${k} --> … <!-- /still:${k} --> markers`);
     process.exit(1);
@@ -97,7 +98,7 @@ const img = (k) => {
     `class="poster-img"`, `src="stills/${k}-desktop-1x.webp"`, `alt=""`,
     `data-r-d="${d.r}" data-s-d="${d.s}" data-r-p="${p.r}" data-s-p="${p.s}"`,
     `style="--a-d: ${d.a}; --wmax-d: ${d.wmax}px; --a-p: ${p.a}; --wmax-p: ${p.wmax}px"`,
-    k === "night" ? `fetchpriority="high"` : `loading="lazy"`,
+    k === "open" ? `fetchpriority="high"` : `loading="lazy"`,
   ];
   return (
     `<picture><source media="(max-width: 760px)" srcset="stills/${k}-phone.webp" />` +
@@ -105,7 +106,7 @@ const img = (k) => {
     `<img ${attrs.join(" ")} /></picture>`
   );
 };
-for (const k of ["night", "day"]) {
+for (const k of ["open", "day"]) {
   const open = `<!-- still:${k} -->`, close = `<!-- /still:${k} -->`;
   const a = html.indexOf(open) + open.length, b = html.indexOf(close, a);
   const indent = html.slice(html.lastIndexOf("\n", a - open.length) + 1, a - open.length);
